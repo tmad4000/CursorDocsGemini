@@ -142,6 +142,11 @@ export default function AISidebar() {
 
                 const data = await response.json();
                 newHtml = data.reply;
+
+                // Show rate limit warning if present
+                if (data.warning) {
+                    console.warn('[Rate Limit]', data.warning);
+                }
             }
 
             const aiMsg: Message = {
