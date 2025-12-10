@@ -1,0 +1,113 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111;
+}
+
+.description {
+    margin: 0 0 1.25rem 0;
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e1e1e3;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s ease;
+    background-color: #f9f9fa;
+    font-family: monospace;
+    box-sizing: border-box;
+}
+
+.input:focus {
+    background-color: #ffffff;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.error {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.85rem;
+    color: #dc3545;
+}
+
+.buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.cancelButton,
+.saveButton {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancelButton {
+    background: #f5f5f7;
+    border: 1px solid #e1e1e3;
+    color: #333;
+}
+
+.cancelButton:hover {
+    background: #eee;
+}
+
+.saveButton {
+    background: #0066cc;
+    border: none;
+    color: white;
+}
+
+.saveButton:hover {
+    background: #0055aa;
+}
+
+.hint {
+    margin: 1.25rem 0 0 0;
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+}
+
+.hint a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.hint a:hover {
+    text-decoration: underline;
+}
