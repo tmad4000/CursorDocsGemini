@@ -112,6 +112,11 @@ function checkRateLimit(ip: string): { allowed: boolean; error?: string; warning
 // ============================================
 
 export async function POST(req: Request) {
+    // Debug: Check if API key is available
+    const hasApiKey = !!process.env.OPENAI_API_KEY;
+    const keyPrefix = process.env.OPENAI_API_KEY?.substring(0, 7) || 'not set';
+    console.log(`[API Debug] API key available: ${hasApiKey}, prefix: ${keyPrefix}`);
+
     try {
         // Check rate limits first
         const ip = getClientIP(req);
