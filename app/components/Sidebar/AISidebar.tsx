@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import styles from './AISidebar.module.css';
 import { useEditorContext } from '@/context/EditorContext';
+import { AVAILABLE_MODELS, DEFAULT_MODEL, ModelId } from '@/lib/models';
 
 interface Message {
     id: string;
@@ -22,6 +23,7 @@ export default function AISidebar() {
     ]);
     const [isTyping, setIsTyping] = useState(false);
     const [trackChanges, setTrackChanges] = useState(true);
+    const [selectedModel, setSelectedModel] = useState<ModelId>(DEFAULT_MODEL);
 
     const handleSend = async () => {
         if (!input.trim()) return;
@@ -73,6 +75,7 @@ export default function AISidebar() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    model: selectedModel,
                     messages: [
                         {
                             role: "system",
@@ -124,7 +127,19 @@ export default function AISidebar() {
         <div className={styles.sidebarContent}>
             <div className={styles.header}>
                 <h2>AI Assistant</h2>
-                <div className={styles.toggleContainer}>
+                <div className={styles.controls}>
+                    <select
+                        className={styles.modelSelector}
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+                        title="Select AI Model"
+                    >
+                        {AVAILABLE_MODELS.map((model) => (
+                            <option key={model.id} value={model.id}>
+                                {model.name}
+                            </option>
+                        ))}
+                    </select>
                     <label className={styles.toggleLabel}>
                         <input
                             type="checkbox"

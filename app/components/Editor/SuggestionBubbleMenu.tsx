@@ -141,7 +141,6 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
     return (
         <BubbleMenu
             editor={editor}
-            options={{ tippyOptions: { duration: 100, interactive: true } }}
             shouldShow={({ editor }: { editor: Editor }) => {
                 return editor.isActive('insertion') || editor.isActive('deletion');
             }}
