@@ -1,0 +1,23 @@
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #f9f9fa; /* Light, clean background */
+}
+
+.sidebar {
+  width: 350px;
+  background-color: #ffffff;
+  border-right: 1px solid #e1e1e3;
+  display: flex;
+  flex-direction: column;
+}
+
+.editorArea {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 2rem;
+}
