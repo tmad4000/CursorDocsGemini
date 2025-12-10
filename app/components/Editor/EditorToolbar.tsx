@@ -79,7 +79,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
             <button
                 className={styles.acceptButton}
                 onClick={() => {
-                    // Primitive accept: remove deletions, keep insertions (rm class)
+                    // Accept all: remove deletions, keep insertions (rm class)
                     // This requires a custom extension or DOM manipulation.
                     // For now, we will just use basic regex on HTML (hacky but works for demo)
                     const html = editor.getHTML();
@@ -89,12 +89,12 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                     editor.commands.setContent(accepted);
                 }}
             >
-                Accept
+                Accept All
             </button>
             <button
                 className={styles.rejectButton}
                 onClick={() => {
-                    // Primitive reject: remove insertions, keep deletions text (rm tags)
+                    // Reject all: remove insertions, keep deletions text (rm tags)
                     const html = editor.getHTML();
                     const rejected = html
                         .replace(/<span class="suggestion-insertion">.*?<\/span>/g, '')
@@ -102,7 +102,7 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                     editor.commands.setContent(rejected);
                 }}
             >
-                Reject
+                Reject All
             </button>
         </div>
     );

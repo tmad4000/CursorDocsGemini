@@ -24,38 +24,52 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
         return getMarkRange($anchor, markType);
     };
 
-    const removeAdjacentDeletions = (range: Range) => {
-        const { state, view } = editor;
-        const markType = state.schema.marks.deletion;
-        if (!markType) return;
+    const getAdjacentMarkRanges = (markName: string, range: Range) => {
+        const { state } = editor;
+        const markType = state.schema.marks[markName];
+        if (!markType) return [];
 
         const ranges: Range[] = [];
-        const tryAddRange = (pos: number) => {
+        const positions = [range.from, range.from - 1, range.to, range.to - 1];
+
+        positions.forEach((pos) => {
             if (pos < 0 || pos > state.doc.content.size) return;
             const resolved = state.doc.resolve(pos);
             const found = getMarkRange(resolved, markType);
             if (found) {
                 ranges.push(found);
             }
-        };
-
-        // Check around the insertion to catch paired deletion marks.
-        tryAddRange(range.from);
-        tryAddRange(range.from - 1);
-        tryAddRange(range.to);
-
-        const uniqueRanges = ranges.filter((r, idx, arr) => {
-            return arr.findIndex(other => other.from === r.from && other.to === r.to) === idx;
         });
 
-        if (!uniqueRanges.length) return;
+        return ranges.filter((r, idx, arr) => {
+            return arr.findIndex((other) => other.from === r.from && other.to === r.to) === idx;
+        });
+    };
 
+    const deleteRanges = (ranges: Range[]) => {
+        if (!ranges.length) return;
+        const { state, view } = editor;
         let tr = state.tr;
-        uniqueRanges
+
+        ranges
             .sort((a, b) => b.from - a.from)
-            .forEach(r => {
+            .forEach((r) => {
                 tr = tr.delete(r.from, r.to);
             });
+
+        view.dispatch(tr);
+    };
+
+    const clearMarkRanges = (markName: string, ranges: Range[]) => {
+        if (!ranges.length) return;
+        const { state, view } = editor;
+        const markType = state.schema.marks[markName];
+        if (!markType) return;
+
+        let tr = state.tr;
+        ranges.forEach((r) => {
+            tr = tr.removeMark(r.from, r.to, markType);
+        });
 
         view.dispatch(tr);
     };
@@ -73,7 +87,8 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
                     .setTextSelection(range)
                     .unsetMark('insertion')
                     .run();
-                removeAdjacentDeletions(range);
+                const deletions = getAdjacentMarkRanges('deletion', range);
+                deleteRanges(deletions);
             }
             // Accept insertion: just remove the mark, keeping the text
         } else if (isDeletion) {
@@ -103,6 +118,8 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
                     .setTextSelection(range)
                     .deleteSelection()
                     .run();
+                const deletions = getAdjacentMarkRanges('deletion', range);
+                clearMarkRanges('deletion', deletions);
             }
             // Reject insertion: delete the text
         } else if (isDeletion) {
@@ -114,6 +131,8 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
                     .setTextSelection(range)
                     .unsetMark('deletion')
                     .run();
+                const insertions = getAdjacentMarkRanges('insertion', range);
+                deleteRanges(insertions);
             }
             // Reject deletion: just remove the mark, keeping the text (restoring it)
         }
@@ -133,17 +152,21 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
                 onClick={handleAccept}
                 onMouseDown={(e) => e.preventDefault()}
                 className={styles.acceptButton}
-                aria-label="Accept Change"
+                aria-label="Accept change"
+                title="Accept change"
             >
                 <Check size={16} />
+                <span>Accept</span>
             </button>
             <button
                 onClick={handleReject}
                 onMouseDown={(e) => e.preventDefault()}
                 className={styles.rejectButton}
-                aria-label="Reject Change"
+                aria-label="Reject change"
+                title="Reject change"
             >
                 <X size={16} />
+                <span>Reject</span>
             </button>
         </BubbleMenu>
     );
