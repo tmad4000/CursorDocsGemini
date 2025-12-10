@@ -153,7 +153,14 @@ export async function POST(req: Request) {
         return NextResponse.json(response);
     } catch (error) {
         console.error('OpenAI API Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorDetails = error instanceof Error ? error.stack : String(error);
+        console.error('Error details:', errorDetails);
+        return NextResponse.json({
+            error: 'Internal Server Error',
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+        }, { status: 500 });
     }
 }
 
