@@ -62,3 +62,39 @@
 .rejectButton:hover {
     background-color: #ffe6e6 !important;
 }
+
+/* Mobile */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        padding: 0.4rem;
+    }
+
+    .toolbar button {
+        padding: 0.35rem;
+    }
+
+    .divider {
+        height: 16px;
+        margin: 0 0.25rem;
+    }
+
+    .acceptButton,
+    .rejectButton {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .toolbar {
+        justify-content: center;
+    }
+
+    .acceptButton,
+    .rejectButton {
+        flex: 1;
+        justify-content: center;
+    }
+}

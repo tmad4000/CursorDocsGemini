@@ -13,7 +13,7 @@ import {
     isStaticMode
 } from '@/lib/openai-client';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
-import { Settings, Key } from 'lucide-react';
+import { Settings, Key, Send } from 'lucide-react';
 
 interface Message {
     id: string;
@@ -167,10 +167,13 @@ export default function AISidebar() {
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Enter without Shift sends the message
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             handleSend();
         }
+        // Shift+Enter allows newline (default behavior)
     };
 
     return (
@@ -274,14 +277,24 @@ export default function AISidebar() {
                 {isTyping && <div className={styles.typingIndicator}>AI is thinking...</div>}
             </div>
             <div className={styles.inputArea}>
-                <input
-                    type="text"
-                    placeholder={trackChanges ? "Suggest changes..." : "Edit directly..."}
-                    className={styles.input}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                />
+                <div className={styles.inputWrapper}>
+                    <textarea
+                        placeholder={trackChanges ? "Suggest changes... (Shift+Enter for new line)" : "Edit directly... (Shift+Enter for new line)"}
+                        className={styles.textarea}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        rows={1}
+                    />
+                    <button
+                        className={styles.sendButton}
+                        onClick={handleSend}
+                        disabled={!input.trim() || isTyping}
+                        title="Send (Enter)"
+                    >
+                        <Send size={18} />
+                    </button>
+                </div>
             </div>
 
             <ApiKeyModal

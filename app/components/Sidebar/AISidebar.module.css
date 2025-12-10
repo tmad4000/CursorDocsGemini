@@ -98,23 +98,67 @@
 .inputArea {
     padding: 1rem;
     border-top: 1px solid #f0f0f0;
+    background-color: #fff;
 }
 
-.input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #e1e1e3;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    outline: none;
-    transition: all 0.2s ease;
+.inputWrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
     background-color: #f9f9fa;
+    border: 1px solid #e1e1e3;
+    border-radius: 12px;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
 }
 
-.input:focus {
+.inputWrapper:focus-within {
     background-color: #ffffff;
     border-color: #0066cc;
     box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.textarea {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    background: transparent;
+    resize: none;
+    min-height: 24px;
+    max-height: 120px;
+    line-height: 1.5;
+    overflow-y: auto;
+}
+
+.textarea::placeholder {
+    color: #999;
+}
+
+.sendButton {
+    background: #0066cc;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.sendButton:hover:not(:disabled) {
+    background: #0055aa;
+}
+
+.sendButton:disabled {
+    background: #ccc;
+    cursor: not-allowed;
 }
 
 .typingIndicator {
