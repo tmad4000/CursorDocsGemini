@@ -2,9 +2,20 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from '@/lib/models';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid errors during static export
+let openai: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+    if (!openai) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY environment variable is not set');
+        }
+        openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+    }
+    return openai;
+}
 
 export async function POST(req: Request) {
     try {
@@ -18,7 +29,7 @@ export async function POST(req: Request) {
         const validModels = AVAILABLE_MODELS.map(m => m.id);
         const selectedModel = validModels.includes(model) ? model : DEFAULT_MODEL;
 
-        const completion = await openai.chat.completions.create({
+        const completion = await getOpenAI().chat.completions.create({
             model: selectedModel,
             messages: [
                 { role: "system", content: "You are a helpful AI writing assistant. You can help users refine their documents. Keep your answers concise and helpful." },
