@@ -3,10 +3,12 @@
 import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
 import EditorToolbar from './EditorToolbar';
 import styles from './RichTextEditor.module.css';
 import { useEditorContext } from '@/context/EditorContext';
 import { Insertion, Deletion } from './extensions/Suggestions';
+import SuggestionBubbleMenu from './SuggestionBubbleMenu';
 
 const content = `
 <h1>The Future of Writing</h1>
@@ -34,6 +36,7 @@ export default function RichTextEditor() {
       StarterKit,
       Insertion,
       Deletion,
+      BubbleMenuExtension,
     ],
     content,
     editorProps: {
@@ -51,6 +54,7 @@ export default function RichTextEditor() {
   return (
     <div className={styles.editorContainer}>
       <EditorToolbar editor={editor} />
+      <SuggestionBubbleMenu editor={editor} />
       <EditorContent editor={editor} className={styles.contentArea} />
     </div>
   );

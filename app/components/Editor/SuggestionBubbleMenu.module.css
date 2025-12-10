@@ -1,0 +1,41 @@
+.bubbleMenu {
+    display: flex;
+    background-color: #ffffff;
+    padding: 0.25rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e1e1e3;
+    gap: 0.25rem;
+    pointer-events: auto;
+    z-index: 50;
+}
+
+.bubbleMenu button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    width: 28px;
+    height: 28px;
+}
+
+.acceptButton {
+    color: #24a148;
+}
+
+.acceptButton:hover {
+    background-color: #e6ffec;
+}
+
+.rejectButton {
+    color: #da1e28;
+}
+
+.rejectButton:hover {
+    background-color: #ffe6e6;
+}
