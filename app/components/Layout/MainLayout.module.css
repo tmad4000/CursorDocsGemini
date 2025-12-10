@@ -20,4 +20,7 @@
   justify-content: center;
   overflow-y: auto;
   padding: 2rem;
+  align-items: flex-start;
+  min-height: 0; /* allow scrolling when nested in flex */
+  min-width: 0;
 }

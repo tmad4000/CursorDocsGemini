@@ -141,8 +141,7 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
     return (
         <BubbleMenu
             editor={editor}
-            // @ts-expect-error tippyOptions is supported at runtime but missing from current type defs
-            tippyOptions={{ duration: 100, interactive: true }}
+            options={{ tippyOptions: { duration: 100, interactive: true } }}
             shouldShow={({ editor }: { editor: Editor }) => {
                 return editor.isActive('insertion') || editor.isActive('deletion');
             }}
