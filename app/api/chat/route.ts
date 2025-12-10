@@ -112,12 +112,6 @@ function checkRateLimit(ip: string): { allowed: boolean; error?: string; warning
 // ============================================
 
 export async function POST(req: Request) {
-    // Debug: Check if API key is available (timestamp: 1234567890)
-    const hasApiKey = !!process.env.OPENAI_API_KEY;
-    const keyPrefix = process.env.OPENAI_API_KEY?.substring(0, 10) || 'NOT_SET';
-    const keyLength = process.env.OPENAI_API_KEY?.length || 0;
-    console.log(`[API Debug v2] hasKey: ${hasApiKey}, prefix: ${keyPrefix}, length: ${keyLength}`);
-
     try {
         // Check rate limits first
         const ip = getClientIP(req);
@@ -159,14 +153,7 @@ export async function POST(req: Request) {
         return NextResponse.json(response);
     } catch (error) {
         console.error('OpenAI API Error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorDetails = error instanceof Error ? error.stack : String(error);
-        console.error('Error details:', errorDetails);
-        return NextResponse.json({
-            error: 'Internal Server Error',
-            message: errorMessage,
-            details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
-        }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
