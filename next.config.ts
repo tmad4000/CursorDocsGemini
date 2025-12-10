@@ -7,8 +7,7 @@ const nextConfig: NextConfig = {
   ...(isStaticExport && {
     output: 'export',
     // GitHub Pages serves from a subdirectory by default
-    // Set basePath if deploying to github.io/repo-name
-    // basePath: '/CursorDocsGemini',
+    basePath: '/CursorDocsGemini',
     images: {
       unoptimized: true,
     },
