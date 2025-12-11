@@ -9,6 +9,7 @@ import styles from './RichTextEditor.module.css';
 import { useEditorContext } from '@/context/EditorContext';
 import { Insertion, Deletion } from './extensions/Suggestions';
 import SuggestionBubbleMenu from './SuggestionBubbleMenu';
+import SelectionBubbleMenu from './SelectionBubbleMenu';
 
 const content = `
 <h1>The Future of Writing</h1>
@@ -55,6 +56,7 @@ export default function RichTextEditor() {
     <div className={styles.editorContainer}>
       <EditorToolbar editor={editor} />
       <SuggestionBubbleMenu editor={editor} />
+      <SelectionBubbleMenu editor={editor} />
       <EditorContent editor={editor} className={styles.contentArea} />
     </div>
   );
