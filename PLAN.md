@@ -22,12 +22,13 @@
     -   (Future) Add keyboard shortcut (Cmd+K) to trigger this.
     -   This triggers a *partial* AI update for just that selection.
 
-## Phase 4: Advanced Views
+## Phase 4: Advanced Views - "Focused Split"
 *Addressing: "Real time editing view", "Split pane".*
-4.  **Drafting / Split Mode**:
-    -   Experiment with a "Side-by-Side" view for heavy rewrites.
-    -   Left: Original text. Right: AI Suggested text.
-    -   "Apply" merges the right side into the left with track-changes marks.
+4.  **Under-Paragraph Suggestion Drawer**:
+    -   Implement an "In-line" expansion drawer.
+    -   When triggered for a specific paragraph, the document "splits" locally.
+    -   Shows [Original Paragraph] vs [AI Suggested Paragraph] stacked vertically.
+    -   Allows "Apply", "Discard", or copy-pasting.
 
 ## Backlog
 5.  **Email Integration**: View clients/drafts (Deferred).

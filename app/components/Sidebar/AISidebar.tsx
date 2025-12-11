@@ -13,7 +13,9 @@ import {
     isStaticMode
 } from '@/lib/openai-client';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
-import { Settings, Key, Send } from 'lucide-react';
+import { Settings, Key, Send, Wand2 } from 'lucide-react';
+
+import ReviewTab from './ReviewTab';
 
 interface Message {
     id: string;
@@ -23,6 +25,7 @@ interface Message {
 
 export default function AISidebar() {
     const { editor } = useEditorContext();
+    const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -64,8 +67,9 @@ export default function AISidebar() {
         setShowSettings(false);
     };
 
-    const handleSend = async () => {
-        if (!input.trim()) return;
+    const handleSend = async (overrideInput?: string) => {
+        const textToSend = overrideInput || input;
+        if (!textToSend.trim()) return;
 
         if (!editor) {
             alert("Editor is not ready yet.");
@@ -78,12 +82,22 @@ export default function AISidebar() {
             return;
         }
 
-        const currentContent = editor.getHTML();
+        const { from, to, empty } = editor.state.selection;
+        const isSelectionMode = !empty;
+        
+        let currentContent = "";
+        let selectionRange = { from, to };
+
+        if (isSelectionMode) {
+            currentContent = editor.state.doc.textBetween(from, to, ' ', ' ');
+        } else {
+            currentContent = editor.getHTML();
+        }
 
         const userMsg: Message = {
             id: Date.now().toString(),
             role: 'user',
-            content: input,
+            content: textToSend,
         };
 
         setMessages((prev) => [...prev, userMsg]);
@@ -91,26 +105,52 @@ export default function AISidebar() {
         setIsTyping(true);
 
         try {
-            const systemPrompt = `You are an expert intelligent document editor.
-      The user wants you to edit the document provided in HTML format.
+            let systemPrompt = "";
 
-      RULES:
-      1. PRESERVE existing HTML structure (headers, lists, bold, etc.) unless explicitly asked to change it.
-      2. Return ONLY the fully updated HTML content. Do NOT include markdown blocks (like \`\`\`html).
-      3. Do NOT include explanations.
+            if (isSelectionMode) {
+                 systemPrompt = `You are an expert intelligent document editor.
+The user wants you to edit a SPECIFIC SNIPPET of text from the document.
 
-      MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
+RULES:
+1. Return ONLY the updated HTML for the selected snippet.
+2. Do NOT include existing surrounding text, just the replacement for the selection.
+3. PRESERVE existing HTML tags within the selection (like bold, italic) unless asked to change.
+4. Do NOT include markdown blocks.
 
-      IF TRACK CHANGES IS ON:
-      - Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
-      - Wrap ANY added text in <span class="suggestion-insertion">...</span>
-      - Do NOT simply replace text; show the diff.
+MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
 
-      IF DIRECT EDIT IS ON:
-      - Just apply the changes cleanly without extra tags.
+IF TRACK CHANGES IS ON:
+- Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
+- Wrap ANY added text in <span class="suggestion-insertion">...</span>
+- For replacements, include BOTH the deleted text (wrapped in deletion span) and new text (wrapped in insertion span).
 
-      Current Content:
-      ${currentContent}`;
+IF DIRECT EDIT IS ON:
+- Just return the polished HTML.
+
+Current Selection:
+${currentContent}`;
+            } else {
+                systemPrompt = `You are an expert intelligent document editor.
+The user wants you to edit the document provided in HTML format.
+
+RULES:
+1. PRESERVE existing HTML structure (headers, lists, bold, etc.) unless explicitly asked to change it.
+2. Return ONLY the fully updated HTML content. Do NOT include markdown blocks.
+3. Do NOT include explanations.
+
+MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
+
+IF TRACK CHANGES IS ON:
+- Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
+- Wrap ANY added text in <span class="suggestion-insertion">...</span>
+- Do NOT simply replace text; show the diff.
+
+IF DIRECT EDIT IS ON:
+- Just apply the changes cleanly without extra tags.
+
+Current Content:
+${currentContent}`;
+            }
 
             const allMessages = [
                 { role: "system", content: systemPrompt },
@@ -143,7 +183,6 @@ export default function AISidebar() {
                 const data = await response.json();
                 newHtml = data.reply;
 
-                // Show rate limit warning if present
                 if (data.warning) {
                     console.warn('[Rate Limit]', data.warning);
                 }
@@ -152,11 +191,22 @@ export default function AISidebar() {
             const aiMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: trackChanges ? "I've suggested some changes with diffs." : "I've updated the document.",
+                content: trackChanges ? "I've suggested some changes." : "I've updated the text.",
             };
             setMessages((prev) => [...prev, aiMsg]);
 
-            editor.commands.setContent(newHtml);
+            if (isSelectionMode) {
+                // Replace only the selection
+                editor.chain().focus().setTextSelection(selectionRange).insertContent(newHtml).run();
+            } else {
+                // Replace whole document
+                editor.commands.setContent(newHtml);
+            }
+            
+            // Switch to review tab if changes were made and track changes is on
+            if (trackChanges) {
+                setActiveTab('review');
+            }
 
         } catch (error) {
             console.error('Chat error:', error);
@@ -194,6 +244,21 @@ export default function AISidebar() {
                         <Settings size={16} />
                     </button>
                 </div>
+            </div>
+
+            <div className={styles.tabBar}>
+                <button 
+                    className={`${styles.tabButton} ${activeTab === 'chat' ? styles.activeTab : ''}`}
+                    onClick={() => setActiveTab('chat')}
+                >
+                    Chat
+                </button>
+                <button 
+                    className={`${styles.tabButton} ${activeTab === 'review' ? styles.activeTab : ''}`}
+                    onClick={() => setActiveTab('review')}
+                >
+                    Review
+                </button>
             </div>
 
             {showSettings && (
@@ -270,37 +335,51 @@ export default function AISidebar() {
                 </div>
             )}
 
-            <div className={styles.messages}>
-                {messages.map((msg) => (
-                    <div
-                        key={msg.id}
-                        className={`${styles.aiMessage} ${msg.role === 'user' ? styles.userMessage : ''}`}
-                    >
-                        {msg.content}
+            {activeTab === 'chat' ? (
+                <>
+                    <div className={styles.messages}>
+                        {messages.map((msg) => (
+                            <div
+                                key={msg.id}
+                                className={`${styles.aiMessage} ${msg.role === 'user' ? styles.userMessage : ''}`}
+                            >
+                                {msg.content}
+                            </div>
+                        ))}
+                        {isTyping && <div className={styles.typingIndicator}>AI is thinking...</div>}
                     </div>
-                ))}
-                {isTyping && <div className={styles.typingIndicator}>AI is thinking...</div>}
-            </div>
-            <div className={styles.inputArea}>
-                <div className={styles.inputWrapper}>
-                    <textarea
-                        placeholder={trackChanges ? "Suggest changes... (Shift+Enter for new line)" : "Edit directly... (Shift+Enter for new line)"}
-                        className={styles.textarea}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        rows={1}
-                    />
-                    <button
-                        className={styles.sendButton}
-                        onClick={handleSend}
-                        disabled={!input.trim() || isTyping}
-                        title="Send (Enter)"
-                    >
-                        <Send size={18} />
-                    </button>
-                </div>
-            </div>
+                    <div className={styles.inputArea}>
+                        <div className={styles.inputWrapper}>
+                            <button
+                                className={styles.magicButton}
+                                onClick={() => handleSend("Make this better.")}
+                                disabled={isTyping}
+                                title="Make it better"
+                            >
+                                <Wand2 size={18} />
+                            </button>
+                            <textarea
+                                placeholder={trackChanges ? "Suggest changes... (Shift+Enter for new line)" : "Edit directly... (Shift+Enter for new line)"}
+                                className={styles.textarea}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                rows={1}
+                            />
+                            <button
+                                className={styles.sendButton}
+                                onClick={() => handleSend()}
+                                disabled={!input.trim() || isTyping}
+                                title="Send (Enter)"
+                            >
+                                <Send size={18} />
+                            </button>
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <ReviewTab />
+            )}
 
             <ApiKeyModal
                 isOpen={showApiKeyModal}
