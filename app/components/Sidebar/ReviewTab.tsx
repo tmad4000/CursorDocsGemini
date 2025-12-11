@@ -17,6 +17,7 @@ interface Suggestion {
 export default function ReviewTab() {
     const { editor } = useEditorContext();
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [activeId, setActiveId] = useState<string | null>(null);
     const { acceptSuggestion, rejectSuggestion } = useSuggestionActions(editor);
 
     const scanSuggestions = () => {
@@ -67,17 +68,47 @@ export default function ReviewTab() {
         };
 
         editor.on('update', handleUpdate);
-        editor.on('selectionUpdate', handleUpdate); // Optional: scan on selection change if needed
-
+        
         return () => {
             editor.off('update', handleUpdate);
-            editor.off('selectionUpdate', handleUpdate);
         };
     }, [editor]);
+
+    // Handle selection sync (highlight sidebar card when text is clicked)
+    useEffect(() => {
+        if (!editor) return;
+
+        const handleSelectionUpdate = () => {
+            const { from } = editor.state.selection;
+            // Find suggestion containing the cursor
+            const active = suggestions.find(s => from >= s.from && from <= s.to);
+            
+            if (active) {
+                setActiveId(active.id);
+                // Scroll card into view
+                const el = document.getElementById(`suggestion-card-${active.id}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } else {
+                setActiveId(null);
+            }
+        };
+
+        editor.on('selectionUpdate', handleSelectionUpdate);
+        // Also run immediately in case we switched tabs to Review
+        handleSelectionUpdate();
+
+        return () => {
+            editor.off('selectionUpdate', handleSelectionUpdate);
+        };
+    }, [editor, suggestions]);
 
     const scrollToSuggestion = (s: Suggestion) => {
         if (!editor) return;
         editor.chain().focus().setTextSelection({ from: s.from, to: s.to }).run();
+        // Set active immediately for responsiveness
+        setActiveId(s.id);
         
         // Scroll into view logic is built into setTextSelection usually, but sometimes needs help
         const dom = editor.view.domAtPos(s.from).node as HTMLElement;
@@ -114,8 +145,9 @@ export default function ReviewTab() {
             <div className={styles.list}>
                 {suggestions.map((s) => (
                     <div 
-                        key={s.id} 
-                        className={`${styles.card} ${styles[s.type]}`}
+                        key={s.id}
+                        id={`suggestion-card-${s.id}`}
+                        className={`${styles.card} ${styles[s.type]} ${activeId === s.id ? styles.active : ''}`}
                         onClick={() => scrollToSuggestion(s)}
                     >
                         <div className={styles.cardHeader}>

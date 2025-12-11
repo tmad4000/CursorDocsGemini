@@ -42,6 +42,11 @@
     transform: translateY(-1px);
 }
 
+.card.active {
+    box-shadow: 0 0 0 2px #0066cc;
+    background-color: #f8fbff;
+}
+
 .card.insertion {
     border-left-color: #4caf50;
 }

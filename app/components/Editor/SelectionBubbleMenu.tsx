@@ -50,6 +50,7 @@ export default function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps
     return (
         <BubbleMenu
             editor={editor}
+            pluginKey="selection-menu"
             shouldShow={({ editor }) => {
                 const { selection } = editor.state;
                 if (selection.empty) return false;

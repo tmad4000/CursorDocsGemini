@@ -19,6 +19,7 @@ export default function SuggestionBubbleMenu({ editor }: SuggestionBubbleMenuPro
     return (
         <BubbleMenu
             editor={editor}
+            pluginKey="suggestion-menu"
             shouldShow={({ editor }: { editor: Editor }) => {
                 return editor.isActive('insertion') || editor.isActive('deletion');
             }}
