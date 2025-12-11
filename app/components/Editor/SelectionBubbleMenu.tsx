@@ -31,13 +31,25 @@ export default function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps
         setShowInput(false);
     };
 
+    // Reset input state when selection is lost
+    React.useEffect(() => {
+        if (!editor) return;
+        
+        const handleSelectionUpdate = () => {
+            if (editor.state.selection.empty) {
+                setShowInput(false);
+            }
+        };
+
+        editor.on('selectionUpdate', handleSelectionUpdate);
+        return () => {
+            editor.off('selectionUpdate', handleSelectionUpdate);
+        };
+    }, [editor]);
+
     return (
         <BubbleMenu
             editor={editor}
-            tippyOptions={{ 
-                duration: 100,
-                onHide: () => setShowInput(false) // Reset on hide
-            }}
             shouldShow={({ editor }) => {
                 const { selection } = editor.state;
                 if (selection.empty) return false;

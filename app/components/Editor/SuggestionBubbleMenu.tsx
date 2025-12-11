@@ -1,6 +1,6 @@
 import React from 'react';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { Editor } from '@tiptap/core';
+import { Editor } from '@tiptap/react';
 import { Check, X } from 'lucide-react';
 import styles from './SuggestionBubbleMenu.module.css';
 import { useSuggestionActions } from '@/components/Editor/hooks/useSuggestionActions';
