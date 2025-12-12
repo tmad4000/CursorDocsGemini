@@ -83,8 +83,18 @@ export default function AISidebar() {
 
 
     // Ref pattern to allow external triggering without stale closures
-
     const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => {});
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Auto-resize textarea based on content
+    const adjustTextareaHeight = () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = 'auto';
+            const newHeight = Math.min(textarea.scrollHeight, 200); // Max 200px
+            textarea.style.height = `${newHeight}px`;
+        }
+    };
 
 
 
@@ -223,6 +233,10 @@ export default function AISidebar() {
         setMessages((prev) => [...prev, userMsg]);
 
         setInput('');
+        // Reset textarea height after sending
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
 
         setIsTyping(true);
 
@@ -611,10 +625,14 @@ ${currentContent}`;
                                 <Wand2 size={18} />
                             </button>
                             <textarea
+                                ref={textareaRef}
                                 placeholder={trackChanges ? "Suggest changes... (Shift+Enter for new line)" : "Edit directly... (Shift+Enter for new line)"}
                                 className={styles.textarea}
                                 value={input}
-                                onChange={(e) => setInput(e.target.value)}
+                                onChange={(e) => {
+                                    setInput(e.target.value);
+                                    adjustTextareaHeight();
+                                }}
                                 onKeyDown={handleKeyDown}
                                 rows={1}
                             />

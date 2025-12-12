@@ -110,6 +110,7 @@
     border-radius: 12px;
     padding: 0.5rem;
     transition: all 0.2s ease;
+    max-height: 240px;
 }
 
 .inputWrapper:focus-within {
@@ -129,9 +130,10 @@
     background: transparent;
     resize: none;
     min-height: 24px;
-    max-height: 120px;
+    max-height: 200px;
     line-height: 1.5;
     overflow-y: auto;
+    transition: height 0.1s ease-out;
 }
 
 .textarea::placeholder {
