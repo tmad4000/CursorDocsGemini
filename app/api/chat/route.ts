@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from '@/lib/models';
 
 // Lazy initialization to avoid errors during static export
 let openai: OpenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
 function getOpenAI(): OpenAI {
     if (!openai) {
@@ -15,6 +17,72 @@ function getOpenAI(): OpenAI {
         });
     }
     return openai;
+}
+
+function getGemini(): GoogleGenerativeAI {
+    if (!gemini) {
+        if (!process.env.GOOGLE_AI_API_KEY) {
+            throw new Error('GOOGLE_AI_API_KEY environment variable is not set');
+        }
+        gemini = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+    }
+    return gemini;
+}
+
+// Tool definitions for function calling
+const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+    {
+        type: 'function',
+        function: {
+            name: 'fetch_url',
+            description: 'Fetch content from a URL. Use this to get information from web pages when the user asks about external content or needs current information.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    url: {
+                        type: 'string',
+                        description: 'The URL to fetch content from'
+                    }
+                },
+                required: ['url']
+            }
+        }
+    }
+];
+
+// Execute the fetch_url tool
+async function executeFetchUrl(url: string): Promise<string> {
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; AIDocsEditor/1.0)',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+        });
+
+        if (!response.ok) {
+            return `Error fetching URL: ${response.status} ${response.statusText}`;
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        const text = await response.text();
+
+        // For HTML, try to extract meaningful content
+        if (contentType.includes('text/html')) {
+            // Simple HTML to text conversion - strip tags and limit length
+            const stripped = text
+                .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            return stripped.slice(0, 8000); // Limit to ~8K chars
+        }
+
+        return text.slice(0, 8000);
+    } catch (error) {
+        return `Error fetching URL: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
 }
 
 // ============================================
@@ -130,19 +198,79 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
         }
 
-        // Validate model
-        const validModels = AVAILABLE_MODELS.map(m => m.id);
-        const selectedModel = validModels.includes(model) ? model : DEFAULT_MODEL;
+        // Validate model and get provider
+        const modelConfig = AVAILABLE_MODELS.find(m => m.id === model);
+        const selectedModel = modelConfig ? model : DEFAULT_MODEL;
+        const provider = modelConfig?.provider || 'openai';
 
-        const completion = await getOpenAI().chat.completions.create({
-            model: selectedModel,
-            messages: [
-                { role: "system", content: "You are a helpful AI writing assistant. You can help users refine their documents. Keep your answers concise and helpful." },
+        const systemPrompt = "You are a helpful AI writing assistant. You can help users refine their documents. Keep your answers concise and helpful. You have access to a fetch_url tool to retrieve content from web pages when needed.";
+
+        let reply: string | null = null;
+
+        if (provider === 'google') {
+            // Use Gemini
+            const genAI = getGemini();
+            const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' });
+
+            // Convert messages to Gemini format
+            const geminiHistory = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
+                role: m.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: m.content }]
+            }));
+
+            const lastMessage = messages[messages.length - 1];
+            const chat = geminiModel.startChat({
+                history: geminiHistory.length > 0 ? geminiHistory : undefined,
+                systemInstruction: systemPrompt,
+            });
+
+            const result = await chat.sendMessage(lastMessage.content);
+            reply = result.response.text();
+        } else {
+            // Use OpenAI with tool support
+            const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+                { role: "system", content: systemPrompt },
                 ...messages
-            ],
-        });
+            ];
 
-        const reply = completion.choices[0].message.content;
+            let completion = await getOpenAI().chat.completions.create({
+                model: selectedModel,
+                messages: openaiMessages,
+                tools: tools,
+                tool_choice: 'auto',
+            });
+
+            // Handle tool calls
+            let responseMessage = completion.choices[0].message;
+            while (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+                // Add assistant's message with tool calls
+                openaiMessages.push(responseMessage);
+
+                // Process each tool call
+                for (const toolCall of responseMessage.tool_calls) {
+                    if (toolCall.type === 'function' && toolCall.function.name === 'fetch_url') {
+                        const args = JSON.parse(toolCall.function.arguments);
+                        const urlContent = await executeFetchUrl(args.url);
+                        openaiMessages.push({
+                            role: 'tool',
+                            tool_call_id: toolCall.id,
+                            content: urlContent,
+                        });
+                    }
+                }
+
+                // Get the next response
+                completion = await getOpenAI().chat.completions.create({
+                    model: selectedModel,
+                    messages: openaiMessages,
+                    tools: tools,
+                    tool_choice: 'auto',
+                });
+                responseMessage = completion.choices[0].message;
+            }
+
+            reply = responseMessage.content;
+        }
 
         // Include warning in response if applicable
         const response: { reply: string | null; warning?: string } = { reply };
