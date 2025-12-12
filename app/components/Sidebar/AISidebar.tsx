@@ -150,9 +150,9 @@ export default function AISidebar() {
 
     const handleSend = async (overrideInput?: string) => {
 
-        const textToSend = overrideInput || input;
+        const textToSend = overrideInput ?? input ?? '';
 
-        if (!textToSend.trim()) return;
+        if (typeof textToSend !== 'string' || !textToSend.trim()) return;
 
 
 

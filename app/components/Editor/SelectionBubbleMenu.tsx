@@ -14,6 +14,23 @@ export default function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps
     const [showInput, setShowInput] = useState(false);
     const [inputValue, setInputValue] = useState('');
 
+    // Reset input state when selection is lost
+    // This hook must be called before any early returns to satisfy Rules of Hooks
+    React.useEffect(() => {
+        if (!editor) return;
+
+        const handleSelectionUpdate = () => {
+            if (editor.state.selection.empty) {
+                setShowInput(false);
+            }
+        };
+
+        editor.on('selectionUpdate', handleSelectionUpdate);
+        return () => {
+            editor.off('selectionUpdate', handleSelectionUpdate);
+        };
+    }, [editor]);
+
     if (!editor) {
         return null;
     }
@@ -30,22 +47,6 @@ export default function SelectionBubbleMenu({ editor }: SelectionBubbleMenuProps
         setInputValue('');
         setShowInput(false);
     };
-
-    // Reset input state when selection is lost
-    React.useEffect(() => {
-        if (!editor) return;
-        
-        const handleSelectionUpdate = () => {
-            if (editor.state.selection.empty) {
-                setShowInput(false);
-            }
-        };
-
-        editor.on('selectionUpdate', handleSelectionUpdate);
-        return () => {
-            editor.off('selectionUpdate', handleSelectionUpdate);
-        };
-    }, [editor]);
 
     return (
         <BubbleMenu
