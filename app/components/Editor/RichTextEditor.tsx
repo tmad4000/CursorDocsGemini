@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
+import Link from '@tiptap/extension-link';
 import EditorToolbar from './EditorToolbar';
 import styles from './RichTextEditor.module.css';
 import { useEditorContext } from '@/context/EditorContext';
@@ -38,6 +39,15 @@ export default function RichTextEditor() {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Link.configure({
+        autolink: true,
+        linkOnPaste: true,
+        openOnClick: true,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer nofollow',
+        },
+      }),
       Insertion,
       Deletion,
       BubbleMenuExtension,
