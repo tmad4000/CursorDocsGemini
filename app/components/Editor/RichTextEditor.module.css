@@ -1,6 +1,6 @@
 .editorContainer {
     width: 100%;
-    max-width: 720px; /* Standard document width like Google Docs */
+    max-width: var(--editor-max-width, 720px);
     background-color: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
@@ -8,12 +8,36 @@
     display: flex;
     flex-direction: column;
     min-height: 800px;
+    transition: max-width 0.2s ease;
+}
+
+.editorContainer.compact {
+    --editor-max-width: 640px;
+}
+
+.editorContainer.wide {
+    --editor-max-width: 860px;
+}
+
+.editorContainer.full {
+    --editor-max-width: 100%;
 }
 
 .contentArea {
     flex: 1;
-    padding: 3rem 4rem;
+    padding: var(--editor-padding-y, 2rem) var(--editor-padding-x, 2.5rem);
     outline: none;
+    transition: padding 0.2s ease;
+}
+
+.editorContainer.compact .contentArea {
+    --editor-padding-y: 1.5rem;
+    --editor-padding-x: 2rem;
+}
+
+.editorContainer.wide .contentArea {
+    --editor-padding-y: 2.5rem;
+    --editor-padding-x: 3.5rem;
 }
 
 .tiptapEditor {
@@ -108,7 +132,7 @@
     }
 
     .contentArea {
-        padding: 2rem 2.5rem;
+        padding: 1.5rem 2rem;
     }
 }
 

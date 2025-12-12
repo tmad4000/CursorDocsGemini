@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
@@ -10,6 +10,8 @@ import { useEditorContext } from '@/context/EditorContext';
 import { Insertion, Deletion } from './extensions/Suggestions';
 import SuggestionBubbleMenu from './SuggestionBubbleMenu';
 import SelectionBubbleMenu from './SelectionBubbleMenu';
+
+export type EditorWidth = 'compact' | 'default' | 'wide' | 'full';
 
 const content = `
 <h1>The Future of Writing</h1>
@@ -31,6 +33,7 @@ const content = `
 
 export default function RichTextEditor() {
   const { setEditor } = useEditorContext();
+  const [editorWidth, setEditorWidth] = useState<EditorWidth>('default');
 
   const editor = useEditor({
     extensions: [
@@ -52,9 +55,11 @@ export default function RichTextEditor() {
     setEditor(editor);
   }, [editor, setEditor]);
 
+  const containerClass = `${styles.editorContainer}${editorWidth !== 'default' ? ` ${styles[editorWidth]}` : ''}`;
+
   return (
-    <div className={styles.editorContainer}>
-      <EditorToolbar editor={editor} />
+    <div className={containerClass}>
+      <EditorToolbar editor={editor} editorWidth={editorWidth} setEditorWidth={setEditorWidth} />
       <SuggestionBubbleMenu editor={editor} />
       <SelectionBubbleMenu editor={editor} />
       <EditorContent editor={editor} className={styles.contentArea} />

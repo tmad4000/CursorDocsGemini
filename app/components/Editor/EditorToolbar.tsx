@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Editor } from '@tiptap/react';
-import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, List, ListOrdered, Quote } from 'lucide-react';
+import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, List, ListOrdered, Quote, Columns2 } from 'lucide-react';
 import styles from './EditorToolbar.module.css';
+import { EditorWidth } from './RichTextEditor';
 
 interface EditorToolbarProps {
     editor: Editor | null;
+    editorWidth: EditorWidth;
+    setEditorWidth: (width: EditorWidth) => void;
 }
 
-export default function EditorToolbar({ editor }: EditorToolbarProps) {
+const widthOptions: { value: EditorWidth; label: string }[] = [
+    { value: 'compact', label: 'Compact' },
+    { value: 'default', label: 'Default' },
+    { value: 'wide', label: 'Wide' },
+    { value: 'full', label: 'Full' },
+];
+
+export default function EditorToolbar({ editor, editorWidth, setEditorWidth }: EditorToolbarProps) {
+    const [showWidthMenu, setShowWidthMenu] = useState(false);
+
     if (!editor) {
         return null;
     }
@@ -75,6 +87,32 @@ export default function EditorToolbar({ editor }: EditorToolbarProps) {
                 <Code size={18} />
             </button>
 
+            <div className={styles.divider} />
+            <div className={styles.widthSelector}>
+                <button
+                    className={styles.widthButton}
+                    onClick={() => setShowWidthMenu(!showWidthMenu)}
+                    title="Page width"
+                >
+                    <Columns2 size={18} />
+                </button>
+                {showWidthMenu && (
+                    <div className={styles.widthMenu}>
+                        {widthOptions.map((option) => (
+                            <button
+                                key={option.value}
+                                className={`${styles.widthOption} ${editorWidth === option.value ? styles.activeWidth : ''}`}
+                                onClick={() => {
+                                    setEditorWidth(option.value);
+                                    setShowWidthMenu(false);
+                                }}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
             <div className={styles.divider} />
             <button
                 className={styles.acceptButton}
