@@ -489,12 +489,12 @@ ${currentContent}`;
 
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        // Enter without Shift sends the message
-        if (e.key === 'Enter' && !e.shiftKey) {
+        // Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) sends the message
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             handleSend();
         }
-        // Shift+Enter allows newline (default behavior)
+        // Enter and Shift+Enter allow newline (default behavior)
     };
 
     return (
@@ -626,7 +626,7 @@ ${currentContent}`;
                             </button>
                             <textarea
                                 ref={textareaRef}
-                                placeholder={trackChanges ? "Suggest changes... (Shift+Enter for new line)" : "Edit directly... (Shift+Enter for new line)"}
+                                placeholder={trackChanges ? "Suggest changes... (⌘+Enter to send)" : "Edit directly... (⌘+Enter to send)"}
                                 className={styles.textarea}
                                 value={input}
                                 onChange={(e) => {
@@ -640,7 +640,7 @@ ${currentContent}`;
                                 className={styles.sendButton}
                                 onClick={() => handleSend()}
                                 disabled={!input.trim() || isTyping}
-                                title="Send (Enter)"
+                                title="Send (⌘+Enter)"
                             >
                                 <Send size={18} />
                             </button>
