@@ -1,6 +1,6 @@
 .editorContainer {
     width: 100%;
-    max-width: var(--editor-max-width, 720px);
+    max-width: var(--editor-max-width, 860px);
     background-color: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
@@ -12,11 +12,11 @@
 }
 
 .editorContainer.compact {
-    --editor-max-width: 640px;
+    --editor-max-width: 720px;
 }
 
 .editorContainer.wide {
-    --editor-max-width: 860px;
+    --editor-max-width: 1100px;
 }
 
 .editorContainer.full {

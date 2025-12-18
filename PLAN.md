@@ -30,3 +30,31 @@
 
 ## Backlog
 - [ ] **Email Integration**: View clients/drafts (Deferred).
+
+## Phase 5: Review + Chat UX Brainstorm - [PLANNING]
+*Goal: keep AI conversation useful while reviewing suggested edits.*
+
+### UX options
+- **Persistent chat drawer**: keep the main chat thread visible as a collapsible bottom panel even in the Review tab. Review list stays primary; chat is always one click away.
+- **Per‑suggestion “Discuss”**: add a button on each review card to open a focused chat about that specific edit. Could be:
+  - same global thread, but auto‑injects the selected suggestion as context, or
+  - a lightweight per‑suggestion thread (like Google Docs comments).
+- **Reference by click / @mention**: clicking a suggestion inserts a token into the chat input (`@change 3`) and the send handler includes that suggestion range + text in the prompt.
+- **Quick AI actions from Review**: “rephrase this edit”, “make this smaller”, “undo this change” buttons on cards that call the same AI pipeline using the suggestion range as the selection.
+
+### Recommended V1
+- Keep **one global chat thread**, but allow **context targeting**:
+  - Add “Discuss” on each suggestion card.
+  - Clicking it sets a `currentSuggestion` (from/to/type/text) in shared context and either:
+    - opens a small inline chat drawer in Review, or
+    - switches to Chat with the prompt prefilled.
+  - Chat send includes the suggestion’s clean text + type and (optionally) nearby paragraph for context.
+
+### Implementation notes
+- Extend `EditorContext` or add a small `ReviewContext` to store `currentSuggestion`.
+- In `AISidebar.handleSend`, if `currentSuggestion` exists, include it in the system/user prompt and clear it after send (unless “pin” is enabled).
+- In `ReviewTab`, wire card “Discuss” to set context and optionally focus chat input.
+
+### Open questions
+- Should per‑suggestion chats persist as comments (shareable), or stay transient in the main thread?
+- When multiple suggestions are selected, do we batch into one prompt or allow multi‑select review actions?

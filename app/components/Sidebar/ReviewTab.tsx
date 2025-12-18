@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useEditorContext } from '@/context/EditorContext';
 import styles from './ReviewTab.module.css';
-import { Check, X } from 'lucide-react';
+import { Check, X, Plus, Minus } from 'lucide-react';
 import { useSuggestionActions } from '@/components/Editor/hooks/useSuggestionActions';
 
 interface Suggestion {
@@ -150,27 +150,29 @@ export default function ReviewTab() {
                         className={`${styles.card} ${styles[s.type]} ${activeId === s.id ? styles.active : ''}`}
                         onClick={() => scrollToSuggestion(s)}
                     >
-                        <div className={styles.cardHeader}>
-                            <span className={styles.badge}>{s.type}</span>
-                            <div className={styles.actions}>
-                                <button 
-                                    className={styles.acceptBtn}
-                                    onClick={(e) => handleAccept(s, e)}
-                                    title="Accept"
-                                >
-                                    <Check size={14} />
-                                </button>
-                                <button 
-                                    className={styles.rejectBtn}
-                                    onClick={(e) => handleReject(s, e)}
-                                    title="Reject"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
+                        <div className={styles.cardContent}>
+                            <span className={styles.typeIcon}>
+                                {s.type === 'insertion' ? <Plus size={14} /> : <Minus size={14} />}
+                            </span>
+                            <span className={`${styles.preview} ${styles[s.type + 'Text']}`}>
+                                {s.text}
+                            </span>
                         </div>
-                        <div className={styles.preview}>
-                            {s.text}
+                        <div className={styles.actions}>
+                            <button
+                                className={styles.acceptBtn}
+                                onClick={(e) => handleAccept(s, e)}
+                                title="Accept"
+                            >
+                                <Check size={14} />
+                            </button>
+                            <button
+                                className={styles.rejectBtn}
+                                onClick={(e) => handleReject(s, e)}
+                                title="Reject"
+                            >
+                                <X size={14} />
+                            </button>
                         </div>
                     </div>
                 ))}

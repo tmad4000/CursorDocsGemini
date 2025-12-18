@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Editor } from '@tiptap/react';
-import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, List, ListOrdered, Quote, Columns2 } from 'lucide-react';
+import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, List, ListOrdered, Quote, Columns2, Download } from 'lucide-react';
 import styles from './EditorToolbar.module.css';
 import { EditorWidth } from './RichTextEditor';
+import { stripSuggestionSpans, htmlToMarkdown, htmlToPlainText, wrapHtmlForWord } from '@/utils/export';
 
 interface EditorToolbarProps {
     editor: Editor | null;
@@ -19,10 +20,36 @@ const widthOptions: { value: EditorWidth; label: string }[] = [
 
 export default function EditorToolbar({ editor, editorWidth, setEditorWidth }: EditorToolbarProps) {
     const [showWidthMenu, setShowWidthMenu] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
 
     if (!editor) {
         return null;
     }
+
+    const downloadFile = (content: string, mimeType: string, filename: string) => {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleExport = (type: 'markdown' | 'text' | 'word') => {
+        const cleanHtml = stripSuggestionSpans(editor.getHTML());
+
+        if (type === 'markdown') {
+            const markdown = htmlToMarkdown(cleanHtml);
+            downloadFile(markdown, 'text/markdown;charset=utf-8', 'document.md');
+        } else if (type === 'text') {
+            const text = htmlToPlainText(cleanHtml);
+            downloadFile(text, 'text/plain;charset=utf-8', 'document.txt');
+        } else {
+            const wordHtml = wrapHtmlForWord(cleanHtml);
+            downloadFile(wordHtml, 'application/msword;charset=utf-8', 'document.doc');
+        }
+    };
 
     return (
         <div className={styles.toolbar}>
@@ -110,6 +137,47 @@ export default function EditorToolbar({ editor, editorWidth, setEditorWidth }: E
                                 {option.label}
                             </button>
                         ))}
+                    </div>
+                )}
+            </div>
+            <div className={styles.divider} />
+            <div className={styles.exportSelector}>
+                <button
+                    className={styles.exportButton}
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    title="Export document"
+                >
+                    <Download size={18} />
+                </button>
+                {showExportMenu && (
+                    <div className={styles.exportMenu}>
+                        <button
+                            className={styles.exportOption}
+                            onClick={() => {
+                                handleExport('markdown');
+                                setShowExportMenu(false);
+                            }}
+                        >
+                            Markdown (.md)
+                        </button>
+                        <button
+                            className={styles.exportOption}
+                            onClick={() => {
+                                handleExport('text');
+                                setShowExportMenu(false);
+                            }}
+                        >
+                            Plain text (.txt)
+                        </button>
+                        <button
+                            className={styles.exportOption}
+                            onClick={() => {
+                                handleExport('word');
+                                setShowExportMenu(false);
+                            }}
+                        >
+                            Word (.doc)
+                        </button>
                     </div>
                 )}
             </div>

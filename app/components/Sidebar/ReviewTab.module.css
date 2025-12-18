@@ -1,7 +1,9 @@
 .container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     background-color: #fafafa;
 }
 
@@ -34,7 +36,11 @@
     padding: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    border-left: 4px solid transparent;
+    border-left: 3px solid transparent;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
 }
 
 .card:hover {
@@ -55,34 +61,38 @@
     border-left-color: #f44336;
 }
 
-.cardHeader {
+.cardContent {
     display: flex;
-    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.typeIcon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    display: flex;
     align-items: center;
-    margin-bottom: 0.5rem;
+    justify-content: center;
+    margin-top: 1px;
 }
 
-.badge {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
+.insertion .typeIcon {
+    color: #4caf50;
 }
 
-.insertion .badge {
-    background: #e8f5e9;
-    color: #2e7d32;
-}
-
-.deletion .badge {
-    background: #ffebee;
-    color: #c62828;
+.deletion .typeIcon {
+    color: #9e9e9e;
 }
 
 .actions {
     display: flex;
-    gap: 4px;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
 }
 
 .acceptBtn, .rejectBtn {
@@ -117,13 +127,24 @@
 
 .preview {
     font-size: 0.85rem;
-    color: #555;
-    line-height: 1.4;
+    color: #333;
+    line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-family: monospace; /* Helps distinguish editing text */
+    word-break: break-word;
+}
+
+.insertionText {
+    background-color: rgba(76, 175, 80, 0.12);
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.deletionText {
+    text-decoration: line-through;
+    color: #888;
 }
 
 .emptyState {
@@ -131,7 +152,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    flex: 1;
+    min-height: 200px;
     color: #9ca3af;
     text-align: center;
     padding: 2rem;
