@@ -83,7 +83,7 @@ export default function AISidebar() {
 
 
     // Ref pattern to allow external triggering without stale closures
-    const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => {});
+    const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => { });
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Auto-resize textarea based on content
@@ -122,14 +122,11 @@ export default function AISidebar() {
 
         }
 
-        
+
 
         // Register triggerAI
-
-        setTriggerAI((prompt) => {
-
+        setTriggerAI(() => (prompt: string) => {
             handleSendRef.current(prompt);
-
         });
 
     }, []);
@@ -198,7 +195,7 @@ export default function AISidebar() {
 
         const isSelectionMode = !empty;
 
-        
+
 
         let currentContent = "";
 
@@ -250,7 +247,7 @@ export default function AISidebar() {
 
             if (isSelectionMode) {
 
-                 systemPrompt = `You are an expert intelligent document editor.
+                systemPrompt = `You are an expert intelligent document editor.
 
 The user wants you to edit a SPECIFIC SNIPPET of text from the document.
 
@@ -438,7 +435,7 @@ ${currentContent}`;
 
             }
 
-            
+
 
             // Switch to review tab if changes were made and track changes is on
 
@@ -513,13 +510,13 @@ ${currentContent}`;
             </div>
 
             <div className={styles.tabBar}>
-                <button 
+                <button
                     className={`${styles.tabButton} ${activeTab === 'chat' ? styles.activeTab : ''}`}
                     onClick={() => setActiveTab('chat')}
                 >
                     Chat
                 </button>
-                <button 
+                <button
                     className={`${styles.tabButton} ${activeTab === 'review' ? styles.activeTab : ''}`}
                     onClick={() => setActiveTab('review')}
                 >
