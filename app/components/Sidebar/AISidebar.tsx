@@ -26,9 +26,14 @@ import {
 
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
-import { Settings, Key, Send, Wand2 } from 'lucide-react';
-
 import ReviewTab from './ReviewTab';
+import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send } from 'lucide-react';
+
+const QUICK_ACTIONS = [
+    { label: 'Improve', prompt: 'Make this better.', icon: <Wand2 size={14} /> },
+    { label: 'Proofread', prompt: 'Proofread this for grammar and spelling errors only.', icon: <FileCheck size={14} /> },
+    { label: 'Sanity Check', prompt: 'Sanity check and proofread this before I send it. Is it clear, professional, and logical?', icon: <ShieldCheck size={14} /> },
+];
 
 
 
@@ -612,6 +617,19 @@ ${currentContent}`;
                         {isTyping && <div className={styles.typingIndicator}>AI is thinking...</div>}
                     </div>
                     <div className={styles.inputArea}>
+                        <div className={styles.quickActionsContainer}>
+                            {QUICK_ACTIONS.map((action) => (
+                                <button
+                                    key={action.label}
+                                    className={styles.quickActionChip}
+                                    onClick={() => handleSend(action.prompt)}
+                                    disabled={isTyping}
+                                >
+                                    {action.icon}
+                                    <span>{action.label}</span>
+                                </button>
+                            ))}
+                        </div>
                         <div className={styles.inputWrapper}>
                             <button
                                 className={styles.magicButton}
