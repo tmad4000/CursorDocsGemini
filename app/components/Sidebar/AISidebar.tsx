@@ -24,10 +24,18 @@ import {
 
 } from '@/lib/openai-client';
 
+import {
+    fetchMeetingContext,
+    getStoredMeetingContext,
+    setStoredMeetingContext,
+    clearStoredMeetingContext,
+    parsePastedContext,
+} from '@/lib/meeting-context';
+
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
 import ReviewTab from './ReviewTab';
-import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send } from 'lucide-react';
+import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw } from 'lucide-react';
 
 const QUICK_ACTIONS = [
     { label: 'Improve', prompt: 'Make this better.', icon: <Wand2 size={14} /> },
@@ -85,7 +93,9 @@ export default function AISidebar() {
 
     const [useClientMode, setUseClientMode] = useState(false);
 
-
+    const [useMeetingContext, setUseMeetingContext] = useState(false);
+    const [meetingContext, setMeetingContext] = useState<string | null>(null);
+    const [isLoadingContext, setIsLoadingContext] = useState(false);
 
     // Ref pattern to allow external triggering without stale closures
     const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => { });
@@ -117,7 +127,12 @@ export default function AISidebar() {
 
         setApiKey(stored);
 
-
+        // Load stored meeting context
+        const storedContext = getStoredMeetingContext();
+        if (storedContext) {
+            setMeetingContext(storedContext);
+            setUseMeetingContext(true);
+        }
 
         // Show modal if in static mode and no API key
 
@@ -158,7 +173,30 @@ export default function AISidebar() {
 
     };
 
+    const handleFetchMeetingContext = async () => {
+        setIsLoadingContext(true);
+        try {
+            const context = await fetchMeetingContext();
+            if (context?.summary) {
+                setMeetingContext(context.summary);
+                setStoredMeetingContext(context.summary);
+                setUseMeetingContext(true);
+            } else {
+                alert('Could not fetch meeting context. Make sure RealtimeMeetingOutline is running on localhost:3002');
+            }
+        } catch (error) {
+            console.error('Failed to fetch meeting context:', error);
+            alert('Failed to fetch meeting context');
+        } finally {
+            setIsLoadingContext(false);
+        }
+    };
 
+    const handleClearMeetingContext = () => {
+        clearStoredMeetingContext();
+        setMeetingContext(null);
+        setUseMeetingContext(false);
+    };
 
     const handleSend = async (overrideInput?: string) => {
 
@@ -338,7 +376,10 @@ ${currentContent}`;
 
             }
 
-
+            // Inject meeting context if enabled
+            if (useMeetingContext && meetingContext) {
+                systemPrompt += `\n\n## Additional Context from Recent Meetings:\n${meetingContext}\n\nUse this context to inform your edits if relevant.`;
+            }
 
             const allMessages = [
 
@@ -596,6 +637,48 @@ ${currentContent}`;
                                 >
                                     <Key size={14} />
                                     Add API Key
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    <div className={styles.settingRow}>
+                        <label className={styles.toggleLabel}>
+                            <input
+                                type="checkbox"
+                                checked={useMeetingContext}
+                                onChange={(e) => setUseMeetingContext(e.target.checked)}
+                            />
+                            <span>Include meeting context</span>
+                        </label>
+                    </div>
+                    {useMeetingContext && (
+                        <div className={styles.apiKeySection}>
+                            {meetingContext ? (
+                                <div className={styles.apiKeyStatus}>
+                                    <Database size={14} />
+                                    <span>Context loaded</span>
+                                    <button
+                                        className={styles.changeKeyButton}
+                                        onClick={handleFetchMeetingContext}
+                                        disabled={isLoadingContext}
+                                    >
+                                        {isLoadingContext ? <RefreshCw size={14} className="animate-spin" /> : 'Refresh'}
+                                    </button>
+                                    <button
+                                        className={styles.clearKeyButton}
+                                        onClick={handleClearMeetingContext}
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    className={styles.addKeyButton}
+                                    onClick={handleFetchMeetingContext}
+                                    disabled={isLoadingContext}
+                                >
+                                    {isLoadingContext ? <RefreshCw size={14} className="animate-spin" /> : <Database size={14} />}
+                                    {isLoadingContext ? 'Loading...' : 'Fetch from RMO'}
                                 </button>
                             )}
                         </div>
