@@ -230,7 +230,7 @@ export async function POST(req: Request) {
             const lastMessage = messages[messages.length - 1];
             const chat = geminiModel.startChat({
                 history: geminiHistory.length > 0 ? geminiHistory : undefined,
-                systemInstruction: { parts: [{ text: systemPrompt }] },
+                systemInstruction: systemPrompt,
             });
 
             const result = await chat.sendMessage(lastMessage.content);
