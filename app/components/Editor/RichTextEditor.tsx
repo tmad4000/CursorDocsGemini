@@ -13,6 +13,7 @@ import SuggestionBubbleMenu from './SuggestionBubbleMenu';
 import SelectionBubbleMenu from './SelectionBubbleMenu';
 
 export type EditorWidth = 'compact' | 'default' | 'wide' | 'full';
+export type EditorPane = 'notes' | 'final';
 
 const DEFAULT_CONTENT = `
 <h1>The Future of Writing</h1>
@@ -32,32 +33,55 @@ const DEFAULT_CONTENT = `
 </ul>
 `;
 
-const STORAGE_KEY = 'ai-docs-document';
+const DEFAULT_NOTES_CONTENT = `
+<h2>Notes & Scratch</h2>
+<p>Use this space for:</p>
+<ul>
+  <li>Research and reference material</li>
+  <li>Rough outlines and ideas</li>
+  <li>Content you might want to move to the final doc</li>
+</ul>
+<p>Tell the AI things like "expand the outline into the final doc" or "incorporate these notes".</p>
+`;
+
+const STORAGE_KEY_FINAL = 'ai-docs-document';
+const STORAGE_KEY_NOTES = 'ai-docs-notes';
 
 // Load saved content from localStorage
-function getInitialContent(): string {
-  if (typeof window === 'undefined') return DEFAULT_CONTENT;
+function getInitialContent(pane: EditorPane): string {
+  if (typeof window === 'undefined') {
+    return pane === 'notes' ? DEFAULT_NOTES_CONTENT : DEFAULT_CONTENT;
+  }
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const key = pane === 'notes' ? STORAGE_KEY_NOTES : STORAGE_KEY_FINAL;
+    const saved = localStorage.getItem(key);
     if (saved && saved.trim().length > 10) return saved;
   } catch { /* ignore */ }
-  return DEFAULT_CONTENT;
+  return pane === 'notes' ? DEFAULT_NOTES_CONTENT : DEFAULT_CONTENT;
 }
 
-// Debounced save to localStorage
-let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-function saveContent(html: string) {
+// Debounced save to localStorage - use a map for multiple editors
+const saveTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+function saveContent(html: string, pane: EditorPane) {
   if (typeof window === 'undefined') return;
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
+  const key = pane === 'notes' ? STORAGE_KEY_NOTES : STORAGE_KEY_FINAL;
+
+  const existing = saveTimeouts.get(key);
+  if (existing) clearTimeout(existing);
+
+  saveTimeouts.set(key, setTimeout(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, html);
+      localStorage.setItem(key, html);
     } catch { /* ignore quota errors */ }
-  }, 500); // Debounce 500ms
+  }, 500)); // Debounce 500ms
 }
 
-export default function RichTextEditor() {
-  const { setEditor } = useEditorContext();
+interface RichTextEditorProps {
+  pane?: EditorPane;
+}
+
+export default function RichTextEditor({ pane = 'final' }: RichTextEditorProps) {
+  const { setNotesEditor, setFinalEditor } = useEditorContext();
   const [editorWidth, setEditorWidth] = useState<EditorWidth>('default');
 
   const editor = useEditor({
@@ -76,7 +100,7 @@ export default function RichTextEditor() {
       Deletion,
       BubbleMenuExtension,
     ],
-    content: getInitialContent(),
+    content: getInitialContent(pane),
     editorProps: {
       attributes: {
         class: styles.tiptapEditor,
@@ -85,13 +109,17 @@ export default function RichTextEditor() {
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       // Auto-save document content to localStorage
-      saveContent(editor.getHTML());
+      saveContent(editor.getHTML(), pane);
     },
   });
 
   useEffect(() => {
-    setEditor(editor);
-  }, [editor, setEditor]);
+    if (pane === 'notes') {
+      setNotesEditor(editor);
+    } else {
+      setFinalEditor(editor);
+    }
+  }, [editor, pane, setNotesEditor, setFinalEditor]);
 
   const containerClass = `${styles.editorContainer}${editorWidth !== 'default' ? ` ${styles[editorWidth]}` : ''}`;
 

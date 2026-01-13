@@ -37,7 +37,7 @@ import logger from '@/lib/logger';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
 import ReviewTab from './ReviewTab';
-import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check } from 'lucide-react';
+import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check, ArrowRight, Zap } from 'lucide-react';
 
 const QUICK_ACTIONS = [
     { label: 'Improve', prompt: 'Make this better.', icon: <Wand2 size={14} /> },
@@ -61,7 +61,15 @@ interface Message {
 
 export default function AISidebar() {
 
-    const { editor, setTriggerAI } = useEditorContext();
+    const {
+        editor,
+        setTriggerAI,
+        getNotesContent,
+        getFinalContent,
+        activePane,
+        applyToFinal,
+        notesVisible,
+    } = useEditorContext();
 
     const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
 
@@ -350,13 +358,25 @@ IF DIRECT EDIT IS ON:
 Current Selection:
 ${currentContent}`;
                 } else {
+                    // Build context with both panes if notes are visible
+                    const notesContent = notesVisible ? getNotesContent() : '';
+                    const finalContent = currentContent;
+
                     systemPrompt = `You are an expert intelligent document editor.
-The user wants you to edit the document provided in HTML format.
+The user wants you to edit documents provided in HTML format.
+
+${notesVisible ? `## SCRATCH NOTES (reference material, do NOT edit unless asked):
+${notesContent}
+
+## FINAL DOCUMENT (edit this):
+${finalContent}` : `## DOCUMENT:
+${finalContent}`}
 
 RULES:
 1. PRESERVE existing HTML structure (headers, lists, bold, etc.) unless explicitly asked to change it.
-2. Return ONLY the fully updated HTML content. Do NOT include markdown blocks.
+2. Return ONLY the fully updated HTML content for the FINAL DOCUMENT. Do NOT include markdown blocks.
 3. Do NOT include explanations.
+4. If the user asks to "incorporate" or "move" something from notes, add it to the final document.
 
 MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
 
@@ -366,13 +386,12 @@ IF TRACK CHANGES IS ON:
 - Do NOT simply replace text; show the diff.
 
 IF DIRECT EDIT IS ON:
-- Just apply the changes cleanly without extra tags.
-
-Current Content:
-${currentContent}`;
+- Just apply the changes cleanly without extra tags.`;
                 }
             } else {
                 // Conversational mode - respond naturally without forcing edits
+                const notesContent = notesVisible ? getNotesContent() : '';
+
                 systemPrompt = `You are a helpful AI assistant for document editing.
 The user is working on a document and may ask questions, discuss ideas, or request edits.
 
@@ -382,7 +401,12 @@ IMPORTANT: The user's message does NOT appear to be asking for document changes.
 - If they DO want document changes, they will explicitly ask (e.g., "edit this", "fix the grammar", "make this shorter")
 - Do NOT modify the document unless explicitly asked
 
-${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}` : `Document context:\n${currentContent.slice(0, 1500)}...`}`;
+${notesVisible ? `## SCRATCH NOTES:
+${notesContent.slice(0, 1000)}...
+
+## FINAL DOCUMENT:
+${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0, 1500)}...` :
+`${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}` : `Document context:\n${currentContent.slice(0, 1500)}...`}`}`;
             }
 
             // Inject meeting context if enabled
@@ -699,40 +723,96 @@ ${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}`
             {activeTab === 'chat' ? (
                 <>
                     <div className={styles.messages}>
-                        {messages.map((msg) => (
-                            <div
-                                key={msg.id}
-                                className={`${styles.aiMessage} ${msg.role === 'user' ? styles.userMessage : ''}`}
-                                style={{ position: 'relative', paddingRight: '28px' }}
-                            >
-                                {msg.content}
-                                <button
-                                    onClick={() => copyToClipboard(msg.content, msg.id)}
-                                    className={styles.copyButton}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '4px',
-                                        right: '4px',
-                                        padding: '4px',
-                                        background: 'transparent',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        opacity: 0.5,
-                                        transition: 'opacity 0.2s',
-                                        borderRadius: '4px',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.5')}
-                                    title="Copy to clipboard"
-                                >
-                                    {copiedMsgId === msg.id ? (
-                                        <Check size={14} style={{ color: '#22c55e' }} />
-                                    ) : (
-                                        <Copy size={14} style={{ color: '#6b7280' }} />
+                        {messages.map((msg) => {
+                            // Check if this AI message looks like HTML content that could be applied
+                            const isApplyable = msg.role === 'assistant' &&
+                                (msg.content.includes('<') || msg.content.includes('</'));
+
+                            return (
+                                <div key={msg.id} style={{ marginBottom: '8px' }}>
+                                    <div
+                                        className={`${styles.aiMessage} ${msg.role === 'user' ? styles.userMessage : ''}`}
+                                        style={{ position: 'relative', paddingRight: '28px' }}
+                                    >
+                                        {msg.content}
+                                        <button
+                                            onClick={() => copyToClipboard(msg.content, msg.id)}
+                                            className={styles.copyButton}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '4px',
+                                                right: '4px',
+                                                padding: '4px',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                opacity: 0.5,
+                                                transition: 'opacity 0.2s',
+                                                borderRadius: '4px',
+                                            }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                                            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.5')}
+                                            title="Copy to clipboard"
+                                        >
+                                            {copiedMsgId === msg.id ? (
+                                                <Check size={14} style={{ color: '#22c55e' }} />
+                                            ) : (
+                                                <Copy size={14} style={{ color: '#6b7280' }} />
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    {/* Apply to Final buttons for AI HTML responses */}
+                                    {isApplyable && (
+                                        <div style={{
+                                            display: 'flex',
+                                            gap: '6px',
+                                            marginTop: '6px',
+                                            paddingLeft: '8px',
+                                        }}>
+                                            <button
+                                                onClick={() => applyToFinal(msg.content, true)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '4px 8px',
+                                                    fontSize: '11px',
+                                                    background: '#e8f0fe',
+                                                    border: '1px solid #4285f4',
+                                                    borderRadius: '4px',
+                                                    color: '#1a73e8',
+                                                    cursor: 'pointer',
+                                                }}
+                                                title="Apply with track changes"
+                                            >
+                                                <ArrowRight size={12} />
+                                                Apply to Final
+                                            </button>
+                                            <button
+                                                onClick={() => applyToFinal(msg.content, false)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '4px 8px',
+                                                    fontSize: '11px',
+                                                    background: '#fef3c7',
+                                                    border: '1px solid #f59e0b',
+                                                    borderRadius: '4px',
+                                                    color: '#b45309',
+                                                    cursor: 'pointer',
+                                                }}
+                                                title="Apply directly without track changes"
+                                            >
+                                                <Zap size={12} />
+                                                Direct Apply
+                                            </button>
+                                        </div>
                                     )}
-                                </button>
-                            </div>
-                        ))}
+                                </div>
+                            );
+                        })}
                         {isTyping && <div className={styles.typingIndicator}>AI is thinking...</div>}
                     </div>
                     <div className={styles.inputArea}>

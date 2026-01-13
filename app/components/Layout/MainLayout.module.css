@@ -48,11 +48,17 @@
   position: relative;
 }
 
-.toggleButton {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
+.topToolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e1e1e3;
   z-index: 30;
+}
+
+.toggleButton {
   background: #fff;
   border: 1px solid #e1e1e3;
   border-radius: 8px;
@@ -70,6 +76,97 @@
   background: #f5f5f7;
   color: #333;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.notesToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background: #f5f5f7;
+  border: 1px solid #e1e1e3;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.notesToggle:hover {
+  background: #ebebed;
+  color: #333;
+}
+
+.notesToggleActive {
+  background: #e8f0fe;
+  border-color: #4285f4;
+  color: #1a73e8;
+}
+
+/* Split container for dual editors */
+.splitContainer {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.editorPane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f5f5f7;
+  transition: border-color 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.activePane {
+  border-color: #4285f4;
+}
+
+.notesPane {
+  border-right: 1px solid #e1e1e3;
+}
+
+.finalPane {
+  flex: 1;
+}
+
+.paneHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e1e1e3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.paneContent {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1.5rem;
+  align-items: flex-start;
+  min-height: 0;
+}
+
+/* Resizer handle between panes */
+.resizer {
+  width: 6px;
+  background: #e1e1e3;
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.resizer:hover {
+  background: #4285f4;
 }
 
 .editorWrapper {

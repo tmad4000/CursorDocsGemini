@@ -8,7 +8,8 @@ export default function Home() {
     <EditorProvider>
       <MainLayout
         sidebar={<AISidebar />}
-        editor={<RichTextEditor />}
+        editor={<RichTextEditor pane="final" />}
+        notesEditor={<RichTextEditor pane="notes" />}
       />
     </EditorProvider>
   );
