@@ -96,6 +96,7 @@ export default function AISidebar() {
     const [useMeetingContext, setUseMeetingContext] = useState(false);
     const [meetingContext, setMeetingContext] = useState<string | null>(null);
     const [isLoadingContext, setIsLoadingContext] = useState(false);
+    const [alwaysSuggestChanges, setAlwaysSuggestChanges] = useState(false);
 
     // Ref pattern to allow external triggering without stale closures
     const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => { });
@@ -286,94 +287,68 @@ export default function AISidebar() {
 
             let systemPrompt = "";
 
+            // Check if this looks like a request for document changes
+            const editKeywords = /\b(edit|change|fix|improve|rewrite|revise|update|make|add|remove|delete|insert|replace|proofread|correct|shorten|expand|summarize|rephrase)\b/i;
+            const looksLikeEditRequest = alwaysSuggestChanges || editKeywords.test(textToSend);
 
-
-            if (isSelectionMode) {
-
-                systemPrompt = `You are an expert intelligent document editor.
-
+            if (looksLikeEditRequest) {
+                // Edit mode - return HTML changes
+                if (isSelectionMode) {
+                    systemPrompt = `You are an expert intelligent document editor.
 The user wants you to edit a SPECIFIC SNIPPET of text from the document.
 
-
-
 RULES:
-
 1. Return ONLY the updated HTML for the selected snippet.
-
 2. Do NOT include existing surrounding text, just the replacement for the selection.
-
 3. PRESERVE existing HTML tags within the selection (like bold, italic) unless asked to change.
-
 4. Do NOT include markdown blocks.
 
-
-
 MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
 
-
-
 IF TRACK CHANGES IS ON:
-
 - Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
-
 - Wrap ANY added text in <span class="suggestion-insertion">...</span>
-
 - For replacements, include BOTH the deleted text (wrapped in deletion span) and new text (wrapped in insertion span).
 
-
-
 IF DIRECT EDIT IS ON:
-
 - Just return the polished HTML.
 
-
-
 Current Selection:
-
 ${currentContent}`;
-
-            } else {
-
-                systemPrompt = `You are an expert intelligent document editor.
-
+                } else {
+                    systemPrompt = `You are an expert intelligent document editor.
 The user wants you to edit the document provided in HTML format.
 
-
-
 RULES:
-
 1. PRESERVE existing HTML structure (headers, lists, bold, etc.) unless explicitly asked to change it.
-
 2. Return ONLY the fully updated HTML content. Do NOT include markdown blocks.
-
 3. Do NOT include explanations.
-
-
 
 MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
 
-
-
 IF TRACK CHANGES IS ON:
-
 - Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
-
 - Wrap ANY added text in <span class="suggestion-insertion">...</span>
-
 - Do NOT simply replace text; show the diff.
 
-
-
 IF DIRECT EDIT IS ON:
-
 - Just apply the changes cleanly without extra tags.
 
-
-
 Current Content:
-
 ${currentContent}`;
+                }
+            } else {
+                // Conversational mode - respond naturally without forcing edits
+                systemPrompt = `You are a helpful AI assistant for document editing.
+The user is working on a document and may ask questions, discuss ideas, or request edits.
 
+IMPORTANT: The user's message does NOT appear to be asking for document changes.
+- Respond conversationally in plain text (not HTML)
+- Answer questions, provide information, or discuss the topic
+- If they DO want document changes, they will explicitly ask (e.g., "edit this", "fix the grammar", "make this shorter")
+- Do NOT modify the document unless explicitly asked
+
+${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}` : `Document context:\n${currentContent.slice(0, 1500)}...`}`;
             }
 
             // Inject meeting context if enabled
@@ -453,42 +428,36 @@ ${currentContent}`;
 
 
 
-            const aiMsg: Message = {
+            // Handle response based on mode
+            if (looksLikeEditRequest) {
+                // Edit mode - apply changes to document
+                const aiMsg: Message = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: trackChanges ? "I've suggested some changes." : "I've updated the text.",
+                };
+                setMessages((prev) => [...prev, aiMsg]);
 
-                id: (Date.now() + 1).toString(),
+                if (isSelectionMode) {
+                    // Replace only the selection
+                    editor.chain().focus().setTextSelection(selectionRange).insertContent(newHtml).run();
+                } else {
+                    // Replace whole document
+                    editor.commands.setContent(newHtml);
+                }
 
-                role: 'assistant',
-
-                content: trackChanges ? "I've suggested some changes." : "I've updated the text.",
-
-            };
-
-            setMessages((prev) => [...prev, aiMsg]);
-
-
-
-            if (isSelectionMode) {
-
-                // Replace only the selection
-
-                editor.chain().focus().setTextSelection(selectionRange).insertContent(newHtml).run();
-
+                // Switch to review tab if changes were made and track changes is on
+                if (trackChanges) {
+                    setActiveTab('review');
+                }
             } else {
-
-                // Replace whole document
-
-                editor.commands.setContent(newHtml);
-
-            }
-
-
-
-            // Switch to review tab if changes were made and track changes is on
-
-            if (trackChanges) {
-
-                setActiveTab('review');
-
+                // Conversational mode - just show the response in chat
+                const aiMsg: Message = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: newHtml, // In conversational mode, this is plain text
+                };
+                setMessages((prev) => [...prev, aiMsg]);
             }
 
 
@@ -594,6 +563,16 @@ ${currentContent}`;
                                 onChange={(e) => setTrackChanges(e.target.checked)}
                             />
                             <span>Track Changes</span>
+                        </label>
+                    </div>
+                    <div className={styles.settingRow}>
+                        <label className={styles.toggleLabel}>
+                            <input
+                                type="checkbox"
+                                checked={alwaysSuggestChanges}
+                                onChange={(e) => setAlwaysSuggestChanges(e.target.checked)}
+                            />
+                            <span>Always suggest changes</span>
                         </label>
                     </div>
                     <div className={styles.settingRow}>
