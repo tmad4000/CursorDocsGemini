@@ -32,6 +32,8 @@ import {
     parsePastedContext,
 } from '@/lib/meeting-context';
 
+import logger from '@/lib/logger';
+
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
 import ReviewTab from './ReviewTab';
@@ -458,9 +460,12 @@ ${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}`
 
         } catch (error) {
 
-            console.error('Chat error:', error);
-
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logger.error('Chat failed', error instanceof Error ? error : undefined, {
+                model: selectedModel,
+                isSelectionMode,
+                useMeetingContext,
+            });
 
             const aiMsg: Message = {
 
