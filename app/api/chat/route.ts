@@ -213,12 +213,12 @@ export async function POST(req: Request) {
         if (provider === 'google') {
             // Use Gemini - map model IDs to API model names
             const geminiModelMap: Record<string, string> = {
-                'gemini-3-flash': 'gemini-3.0-flash',
+                'gemini-3-flash': 'gemini-3-flash-preview',
                 'gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
                 'gemini-2.0-flash': 'gemini-2.0-flash',
             };
             const genAI = getGemini();
-            const apiModelName = geminiModelMap[selectedModel] || 'gemini-3.0-flash';
+            const apiModelName = geminiModelMap[selectedModel] || 'gemini-3-flash-preview';
             const geminiModel = genAI.getGenerativeModel({ model: apiModelName });
 
             // Convert messages to Gemini format
@@ -230,7 +230,7 @@ export async function POST(req: Request) {
             const lastMessage = messages[messages.length - 1];
             const chat = geminiModel.startChat({
                 history: geminiHistory.length > 0 ? geminiHistory : undefined,
-                systemInstruction: systemPrompt,
+                systemInstruction: { parts: [{ text: systemPrompt }] },
             });
 
             const result = await chat.sendMessage(lastMessage.content);
