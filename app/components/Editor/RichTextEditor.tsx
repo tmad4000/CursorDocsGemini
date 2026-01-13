@@ -14,13 +14,13 @@ import SelectionBubbleMenu from './SelectionBubbleMenu';
 
 export type EditorWidth = 'compact' | 'default' | 'wide' | 'full';
 
-const content = `
+const DEFAULT_CONTENT = `
 <h1>The Future of Writing</h1>
 <p>
   Writing is no longer a solitary activity. With the power of <strong>Artificial Intelligence</strong>, we can iterate faster, write better, and communicate more effectively.
 </p>
 <p>
-  This document is an example of a "Cursor-like" experience for editing. 
+  This document is an example of a "Cursor-like" experience for editing.
   You can use the sidebar to ask the AI to rewrite sections, fix grammar, or even change the tone of the entire document.
 </p>
 <blockquote>
@@ -31,6 +31,30 @@ const content = `
   <li>Or "change the quote to something about technology".</li>
 </ul>
 `;
+
+const STORAGE_KEY = 'ai-docs-document';
+
+// Load saved content from localStorage
+function getInitialContent(): string {
+  if (typeof window === 'undefined') return DEFAULT_CONTENT;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && saved.trim().length > 10) return saved;
+  } catch { /* ignore */ }
+  return DEFAULT_CONTENT;
+}
+
+// Debounced save to localStorage
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+function saveContent(html: string) {
+  if (typeof window === 'undefined') return;
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, html);
+    } catch { /* ignore quota errors */ }
+  }, 500); // Debounce 500ms
+}
 
 export default function RichTextEditor() {
   const { setEditor } = useEditorContext();
@@ -52,13 +76,17 @@ export default function RichTextEditor() {
       Deletion,
       BubbleMenuExtension,
     ],
-    content,
+    content: getInitialContent(),
     editorProps: {
       attributes: {
         class: styles.tiptapEditor,
       },
     },
     immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      // Auto-save document content to localStorage
+      saveContent(editor.getHTML());
+    },
   });
 
   useEffect(() => {
