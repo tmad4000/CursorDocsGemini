@@ -404,24 +404,18 @@ ${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}`
 
 
 
-                if (!response.ok) {
-
-                    throw new Error('Failed to get response');
-
-                }
-
-
-
                 const data = await response.json();
+
+                if (!response.ok) {
+                    const errorMsg = data.error || 'Failed to get response';
+                    const suggestion = data.suggestion || '';
+                    throw new Error(suggestion ? `${errorMsg}\n\n💡 ${suggestion}` : errorMsg);
+                }
 
                 newHtml = data.reply;
 
-
-
                 if (data.warning) {
-
                     console.warn('[Rate Limit]', data.warning);
-
                 }
 
             }

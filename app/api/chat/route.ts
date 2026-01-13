@@ -187,7 +187,10 @@ export async function POST(req: Request) {
 
         if (!rateCheck.allowed) {
             return NextResponse.json(
-                { error: rateCheck.error },
+                {
+                    error: rateCheck.error,
+                    suggestion: 'Try switching to a Gemini model (Gemini 3 Flash) which has separate rate limits.'
+                },
                 { status: 429 }
             );
         }
@@ -208,9 +211,15 @@ export async function POST(req: Request) {
         let reply: string | null = null;
 
         if (provider === 'google') {
-            // Use Gemini
+            // Use Gemini - map model IDs to API model names
+            const geminiModelMap: Record<string, string> = {
+                'gemini-3-flash': 'gemini-3.0-flash',
+                'gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
+                'gemini-2.0-flash': 'gemini-2.0-flash',
+            };
             const genAI = getGemini();
-            const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' });
+            const apiModelName = geminiModelMap[selectedModel] || 'gemini-3.0-flash';
+            const geminiModel = genAI.getGenerativeModel({ model: apiModelName });
 
             // Convert messages to Gemini format
             const geminiHistory = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
