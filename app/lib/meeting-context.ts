@@ -1,31 +1,65 @@
 // Meeting context integration for RealtimeMeetingOutline
-// Fetches recent meetings/knowledge to provide context for document editing
+// Fetches comprehensive context including meetings, files, knowledge base, and entities
 
 const RMO_API_BASE = 'http://localhost:3002';
 
-export interface MeetingContext {
-  meetings: Array<{
-    id: string;
-    title: string;
-    date: string;
-    transcript?: string;
-    outline?: {
-      meeting?: {
-        topics?: Array<{ title: string; notes?: string }>;
-        participants?: Array<{ name: string }>;
-      };
-      people?: Array<{ name: string; title?: string }>;
-      organizations?: Array<{ name: string }>;
+export interface UserFile {
+  filename: string;
+  content?: string;
+  error?: string;
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  date: string;
+  transcript?: string;
+  outline?: {
+    meeting?: {
+      topics?: Array<{ title: string; notes?: string }>;
+      participants?: Array<{ name: string }>;
     };
-  }>;
-  summary: string;
+    people?: Array<{ name: string; title?: string }>;
+    organizations?: Array<{ name: string }>;
+  };
+}
+
+export interface KnowledgeEntry {
+  source: string;
+  content: string;
+  date?: string;
+}
+
+export interface Entity {
+  name: string;
+  title?: string;
+  company?: string;
+  description?: string;
+}
+
+export interface RMOContext {
+  userFiles: UserFile[];
+  recentMeetings: Meeting[];
+  knowledgeBase: {
+    structuredEntries: KnowledgeEntry[];
+    markdownFiles: Array<{ name: string; content: string }>;
+  };
+  entities: {
+    people: Entity[];
+    organizations: Entity[];
+  };
+  capabilities: string[];
 }
 
 /**
- * Fetch recent meetings from RealtimeMeetingOutline backend
+ * Fetch comprehensive context from RealtimeMeetingOutline backend
  * Requires the RMO backend to be running on localhost:3002
+ *
+ * Auth options:
+ * - Pass an auth token for full access to user-specific meetings
+ * - From localhost, basic context (files, knowledge base) works without auth
  */
-export async function fetchMeetingContext(authToken?: string): Promise<MeetingContext | null> {
+export async function fetchRMOContext(authToken?: string): Promise<RMOContext | null> {
   try {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -35,26 +69,17 @@ export async function fetchMeetingContext(authToken?: string): Promise<MeetingCo
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(`${RMO_API_BASE}/api/meetings`, {
+    const response = await fetch(`${RMO_API_BASE}/api/assistant/context`, {
       headers,
       credentials: 'include',
     });
 
     if (!response.ok) {
-      console.warn('Failed to fetch meetings:', response.status);
+      console.warn('Failed to fetch RMO context:', response.status);
       return null;
     }
 
-    const meetings = await response.json();
-
-    // Build a summary from recent meetings
-    const recentMeetings = meetings.slice(0, 5);
-    const summary = buildMeetingSummary(recentMeetings);
-
-    return {
-      meetings: recentMeetings,
-      summary,
-    };
+    return await response.json();
   } catch (error) {
     console.warn('Could not connect to RealtimeMeetingOutline:', error);
     return null;
@@ -62,51 +87,112 @@ export async function fetchMeetingContext(authToken?: string): Promise<MeetingCo
 }
 
 /**
- * Build a text summary of meetings for AI context
+ * Build a formatted text summary of RMO context for AI prompts
  */
-function buildMeetingSummary(meetings: MeetingContext['meetings']): string {
-  if (!meetings.length) return '';
+export function buildContextSummary(context: RMOContext): string {
+  const parts: string[] = ['# Knowledge Context from Meeting Assistant\n'];
 
-  const parts: string[] = ['## Recent Meeting Context\n'];
-
-  for (const meeting of meetings) {
-    parts.push(`### ${meeting.title || 'Untitled Meeting'} (${meeting.date || 'Unknown date'})`);
-
-    if (meeting.outline) {
-      const outline = typeof meeting.outline === 'string'
-        ? JSON.parse(meeting.outline)
-        : meeting.outline;
-
-      // Participants
-      if (outline.meeting?.participants?.length) {
-        parts.push(`**Participants:** ${outline.meeting.participants.map((p: { name?: string; display?: string }) => p.name || p.display).join(', ')}`);
+  // User files
+  if (context.userFiles?.length > 0) {
+    parts.push('## Your Files\n');
+    for (const file of context.userFiles) {
+      parts.push(`### ${file.filename}`);
+      if (file.content) {
+        parts.push('```');
+        parts.push(file.content.slice(0, 2000));
+        parts.push('```');
       }
+      parts.push('');
+    }
+  }
 
-      // Topics
-      if (outline.meeting?.topics?.length) {
-        parts.push('**Topics:**');
-        for (const topic of outline.meeting.topics.slice(0, 5)) {
-          parts.push(`- ${topic.title}${topic.notes ? `: ${topic.notes}` : ''}`);
+  // Recent meetings
+  if (context.recentMeetings?.length > 0) {
+    parts.push('## Recent Meetings\n');
+    for (const meeting of context.recentMeetings) {
+      parts.push(`### ${meeting.title || 'Untitled Meeting'} (${meeting.date || 'Unknown date'})`);
+
+      if (meeting.outline) {
+        // Participants
+        if (meeting.outline.meeting?.participants?.length) {
+          const participants = meeting.outline.meeting.participants
+            .map((p: { name?: string; display?: string }) => p.name || p.display)
+            .join(', ');
+          parts.push(`**Participants:** ${participants}`);
+        }
+
+        // Topics
+        if (meeting.outline.meeting?.topics?.length) {
+          parts.push('**Topics:**');
+          for (const topic of meeting.outline.meeting.topics.slice(0, 5)) {
+            parts.push(`- ${topic.title}${topic.notes ? `: ${topic.notes}` : ''}`);
+          }
+        }
+
+        // People mentioned
+        if (meeting.outline.people?.length) {
+          const people = meeting.outline.people
+            .slice(0, 10)
+            .map((p: { name?: string; display?: string }) => p.name || p.display)
+            .join(', ');
+          parts.push(`**People mentioned:** ${people}`);
+        }
+
+        // Organizations
+        if (meeting.outline.organizations?.length) {
+          const orgs = meeting.outline.organizations
+            .slice(0, 10)
+            .map((o: { name?: string; display?: string }) => o.name || o.display)
+            .join(', ');
+          parts.push(`**Organizations:** ${orgs}`);
         }
       }
 
-      // People mentioned
-      if (outline.people?.length) {
-        parts.push(`**People mentioned:** ${outline.people.slice(0, 10).map((p: { name?: string; display?: string }) => p.name || p.display).join(', ')}`);
+      // Transcript excerpt
+      if (meeting.transcript && meeting.transcript.length > 50) {
+        parts.push(`**Transcript excerpt:** "${meeting.transcript.slice(0, 500)}..."`);
       }
 
-      // Organizations
-      if (outline.organizations?.length) {
-        parts.push(`**Organizations:** ${outline.organizations.slice(0, 10).map((o: { name?: string; display?: string }) => o.name || o.display).join(', ')}`);
+      parts.push('');
+    }
+  }
+
+  // Knowledge base entries
+  if (context.knowledgeBase?.structuredEntries?.length > 0) {
+    parts.push('## Knowledge Base\n');
+    for (const entry of context.knowledgeBase.structuredEntries.slice(0, 20)) {
+      parts.push(`- [${entry.source}] ${entry.content}`);
+    }
+    parts.push('');
+  }
+
+  // Markdown knowledge files
+  if (context.knowledgeBase?.markdownFiles?.length > 0) {
+    for (const file of context.knowledgeBase.markdownFiles) {
+      parts.push(`## ${file.name}\n`);
+      parts.push(file.content.slice(0, 2000));
+      parts.push('');
+    }
+  }
+
+  // Known entities
+  if (context.entities?.people?.length > 0 || context.entities?.organizations?.length > 0) {
+    parts.push('## Known Contacts\n');
+
+    if (context.entities.people?.length > 0) {
+      parts.push('**People:**');
+      for (const person of context.entities.people.slice(0, 20)) {
+        const details = [person.title, person.company].filter(Boolean).join(' at ');
+        parts.push(`- ${person.name}${details ? ` (${details})` : ''}`);
       }
     }
 
-    // Include transcript excerpt if available
-    if (meeting.transcript && meeting.transcript.length > 50) {
-      const excerpt = meeting.transcript.slice(0, 500);
-      parts.push(`**Transcript excerpt:** "${excerpt}..."`);
+    if (context.entities.organizations?.length > 0) {
+      parts.push('\n**Organizations:**');
+      for (const org of context.entities.organizations.slice(0, 20)) {
+        parts.push(`- ${org.name}${org.description ? `: ${org.description}` : ''}`);
+      }
     }
-
     parts.push('');
   }
 
@@ -114,10 +200,22 @@ function buildMeetingSummary(meetings: MeetingContext['meetings']): string {
 }
 
 /**
+ * Legacy function - still works but prefer fetchRMOContext for full data
+ */
+export async function fetchMeetingContext(authToken?: string): Promise<{ meetings: Meeting[]; summary: string } | null> {
+  const context = await fetchRMOContext(authToken);
+  if (!context) return null;
+
+  return {
+    meetings: context.recentMeetings,
+    summary: buildContextSummary(context),
+  };
+}
+
+/**
  * Parse pasted meeting context (from user copy-paste)
  */
 export function parsePastedContext(text: string): string {
-  // Just clean up and format the pasted text
   return `## Meeting Context (Pasted)\n\n${text.trim()}`;
 }
 
@@ -125,6 +223,7 @@ export function parsePastedContext(text: string): string {
  * Storage key for meeting context
  */
 const CONTEXT_STORAGE_KEY = 'ai-editor-meeting-context';
+const AUTH_TOKEN_KEY = 'rmo-auth-token';
 
 export function getStoredMeetingContext(): string | null {
   if (typeof window === 'undefined') return null;
@@ -139,4 +238,20 @@ export function setStoredMeetingContext(context: string): void {
 export function clearStoredMeetingContext(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(CONTEXT_STORAGE_KEY);
+}
+
+// Auth token storage for cross-app authentication
+export function getStoredAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setStoredAuthToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+export function clearStoredAuthToken(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(AUTH_TOKEN_KEY);
 }
