@@ -67,22 +67,28 @@ export default function AISidebar() {
 
     const [input, setInput] = useState('');
 
-    // Load chat history from localStorage
-    const [messages, setMessages] = useState<Message[]>(() => {
-        if (typeof window === 'undefined') return [];
+    // Messages state - initialized empty to avoid hydration mismatch
+    const [messages, setMessages] = useState<Message[]>([]);
+
+    // Load chat history from localStorage after hydration
+    useEffect(() => {
         try {
             const saved = localStorage.getItem('ai-docs-chat-history');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setMessages(parsed);
+                    return;
+                }
             }
         } catch { /* ignore */ }
-        return [{
+        // Default greeting if no saved history
+        setMessages([{
             id: '1',
             role: 'assistant',
             content: 'Hello! I can help you edit this document. Try asking me "Make the tone more professional" or "Fix grammar".',
-        }];
-    });
+        }]);
+    }, []);
 
     const [isTyping, setIsTyping] = useState(false);
 
