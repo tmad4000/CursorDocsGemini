@@ -206,7 +206,13 @@ export async function POST(req: Request) {
         const selectedModel = modelConfig ? model : DEFAULT_MODEL;
         const provider = modelConfig?.provider || 'openai';
 
-        const systemPrompt = "You are a helpful AI writing assistant. You can help users refine their documents. Keep your answers concise and helpful. You have access to a fetch_url tool to retrieve content from web pages when needed.";
+        // Extract system prompt from client messages (first message if role is 'system')
+        // This includes trackChanges mode and other settings from the frontend
+        const clientSystemMsg = messages.find((m: { role: string }) => m.role === 'system');
+        const systemPrompt = clientSystemMsg?.content || "You are a helpful AI writing assistant. You can help users refine their documents. Keep your answers concise and helpful.";
+
+        // Filter out system messages for the conversation history
+        const conversationMessages = messages.filter((m: { role: string }) => m.role !== 'system');
 
         let reply: string | null = null;
 
@@ -221,13 +227,13 @@ export async function POST(req: Request) {
             const apiModelName = geminiModelMap[selectedModel] || 'gemini-3-flash-preview';
             const geminiModel = genAI.getGenerativeModel({ model: apiModelName });
 
-            // Convert messages to Gemini format
-            const geminiHistory = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
+            // Convert messages to Gemini format (excluding system messages)
+            const geminiHistory = conversationMessages.slice(0, -1).map((m: { role: string; content: string }) => ({
                 role: m.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: m.content }]
             }));
 
-            const lastMessage = messages[messages.length - 1];
+            const lastMessage = conversationMessages[conversationMessages.length - 1];
             const chat = geminiModel.startChat({
                 history: geminiHistory.length > 0 ? geminiHistory : undefined,
                 systemInstruction: { role: 'user', parts: [{ text: systemPrompt }] },
@@ -239,7 +245,7 @@ export async function POST(req: Request) {
             // Use OpenAI with tool support
             const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
                 { role: "system", content: systemPrompt },
-                ...messages
+                ...conversationMessages
             ];
 
             let completion = await getOpenAI().chat.completions.create({

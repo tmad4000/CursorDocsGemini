@@ -37,7 +37,7 @@ import logger from '@/lib/logger';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
 import ReviewTab from './ReviewTab';
-import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw } from 'lucide-react';
+import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check } from 'lucide-react';
 
 const QUICK_ACTIONS = [
     { label: 'Improve', prompt: 'Make this better.', icon: <Wand2 size={14} /> },
@@ -91,6 +91,18 @@ export default function AISidebar() {
     }, []);
 
     const [isTyping, setIsTyping] = useState(false);
+
+    const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+    const copyToClipboard = async (text: string, msgId: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedMsgId(msgId);
+            setTimeout(() => setCopiedMsgId(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
 
     const [trackChanges, setTrackChanges] = useState(true);
 
@@ -691,8 +703,34 @@ ${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}`
                             <div
                                 key={msg.id}
                                 className={`${styles.aiMessage} ${msg.role === 'user' ? styles.userMessage : ''}`}
+                                style={{ position: 'relative', paddingRight: '28px' }}
                             >
                                 {msg.content}
+                                <button
+                                    onClick={() => copyToClipboard(msg.content, msg.id)}
+                                    className={styles.copyButton}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '4px',
+                                        right: '4px',
+                                        padding: '4px',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        opacity: 0.5,
+                                        transition: 'opacity 0.2s',
+                                        borderRadius: '4px',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.5')}
+                                    title="Copy to clipboard"
+                                >
+                                    {copiedMsgId === msg.id ? (
+                                        <Check size={14} style={{ color: '#22c55e' }} />
+                                    ) : (
+                                        <Copy size={14} style={{ color: '#6b7280' }} />
+                                    )}
+                                </button>
                             </div>
                         ))}
                         {isTyping && <div className={styles.typingIndicator}>AI is thinking...</div>}
