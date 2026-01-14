@@ -228,7 +228,12 @@ export async function POST(req: Request) {
             const geminiModel = genAI.getGenerativeModel({ model: apiModelName });
 
             // Convert messages to Gemini format (excluding system messages)
-            const geminiHistory = conversationMessages.slice(0, -1).map((m: { role: string; content: string }) => ({
+            // Gemini requires history to start with 'user' role, so skip leading assistant messages
+            let historyMessages = conversationMessages.slice(0, -1);
+            while (historyMessages.length > 0 && historyMessages[0].role === 'assistant') {
+                historyMessages = historyMessages.slice(1);
+            }
+            const geminiHistory = historyMessages.map((m: { role: string; content: string }) => ({
                 role: m.role === 'assistant' ? 'model' : 'user',
                 parts: [{ text: m.content }]
             }));
