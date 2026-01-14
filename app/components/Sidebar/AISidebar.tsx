@@ -37,7 +37,7 @@ import logger from '@/lib/logger';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
 import ReviewTab from './ReviewTab';
-import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check, ArrowRight, Zap } from 'lucide-react';
+import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check, ArrowRight, Zap, Trash2 } from 'lucide-react';
 
 const QUICK_ACTIONS = [
     { label: 'Improve', prompt: 'Make this better.', icon: <Wand2 size={14} /> },
@@ -110,6 +110,18 @@ export default function AISidebar() {
         } catch (err) {
             console.error('Failed to copy:', err);
         }
+    };
+
+    const clearChat = () => {
+        setMessages([{
+            id: '1',
+            role: 'assistant',
+            content: 'Hello! I can help you edit this document. Try asking me "Make the tone more professional" or "Fix grammar".',
+        }]);
+        // Also clear from localStorage
+        try {
+            localStorage.removeItem('ai-docs-chat-history');
+        } catch { /* ignore */ }
     };
 
     const [trackChanges, setTrackChanges] = useState(true);
@@ -722,6 +734,33 @@ ${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0,
 
             {activeTab === 'chat' ? (
                 <>
+                    {/* Chat header with clear button */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        padding: '4px 8px',
+                        borderBottom: '1px solid #e5e5e5',
+                    }}>
+                        <button
+                            onClick={clearChat}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                fontSize: '11px',
+                                background: 'transparent',
+                                border: '1px solid #e5e5e5',
+                                borderRadius: '4px',
+                                color: '#666',
+                                cursor: 'pointer',
+                            }}
+                            title="Clear chat history"
+                        >
+                            <Trash2 size={12} />
+                            Clear
+                        </button>
+                    </div>
                     <div className={styles.messages}>
                         {messages.map((msg) => {
                             // Check if this AI message looks like HTML content that could be applied
