@@ -37,7 +37,7 @@ import logger from '@/lib/logger';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 
 import ReviewTab from './ReviewTab';
-import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check, ArrowRight, Zap, Trash2 } from 'lucide-react';
+import { Wand2, FileCheck, ShieldCheck, Settings, Key, Send, Database, RefreshCw, Copy, Check, ArrowRight, Zap, Trash2, Info, X, Download } from 'lucide-react';
 
 const QUICK_ACTIONS = [
     { label: 'Improve', prompt: 'Make this better.', icon: <Wand2 size={14} /> },
@@ -69,6 +69,7 @@ export default function AISidebar() {
         activePane,
         applyToFinal,
         notesVisible,
+        setNotesVisible,
     } = useEditorContext();
 
     const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
@@ -140,6 +141,86 @@ export default function AISidebar() {
     const [meetingContext, setMeetingContext] = useState<string | null>(null);
     const [isLoadingContext, setIsLoadingContext] = useState(false);
     const [alwaysSuggestChanges, setAlwaysSuggestChanges] = useState(false);
+    const [showMeetingInfo, setShowMeetingInfo] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
+    // Export document to Word with track changes
+    const handleExportToWord = async () => {
+        const content = getFinalContent();
+        if (!content) {
+            alert('No document content to export');
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            const response = await fetch('/api/export-docx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    html: content,
+                    filename: 'document-with-changes.docx'
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Export failed');
+            }
+
+            // Download the file
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'document-with-changes.docx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export error:', error);
+            alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nMake sure Python dependencies are installed:\npip install python-docx beautifulsoup4 lxml`);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    // Export document to Google Docs with track changes visualization
+    const [isExportingGDoc, setIsExportingGDoc] = useState(false);
+    const handleExportToGoogleDoc = async () => {
+        const content = getFinalContent();
+        if (!content) {
+            alert('No document content to export');
+            return;
+        }
+
+        setIsExportingGDoc(true);
+        try {
+            const response = await fetch('/api/export-gdoc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    html: content,
+                    title: 'AI Docs Export - ' + new Date().toLocaleDateString()
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Export failed');
+            }
+
+            const result = await response.json();
+            // Open the Google Doc in a new tab
+            window.open(result.url, '_blank');
+        } catch (error) {
+            console.error('Google Docs export error:', error);
+            alert(`Google Docs export failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nMake sure:\n1. service-account.json exists in project root\n2. Google Docs & Drive APIs are enabled\n3. Python deps installed: pip install google-auth google-api-python-client beautifulsoup4`);
+        } finally {
+            setIsExportingGDoc(false);
+        }
+    };
 
     // Ref pattern to allow external triggering without stale closures
     const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => { });
@@ -237,7 +318,7 @@ export default function AISidebar() {
                 setStoredMeetingContext(context.summary);
                 setUseMeetingContext(true);
             } else {
-                alert('Could not fetch meeting context. Make sure RealtimeMeetingOutline is running on localhost:3002');
+                alert('Could not fetch meeting context.\n\nTo start RealtimeMeetingOutline:\n1. cd ~/code/RealtimeMeetingOutline\n2. docker-compose up -d\n3. cd backend && npm run dev\n\nOr set NEXT_PUBLIC_RMO_API_URL if using a different port.');
             }
         } catch (error) {
             console.error('Failed to fetch meeting context:', error);
@@ -348,82 +429,101 @@ export default function AISidebar() {
             if (looksLikeEditRequest) {
                 // Edit mode - return HTML changes
                 if (isSelectionMode) {
-                    systemPrompt = `You are an expert intelligent document editor.
-The user wants you to edit a SPECIFIC SNIPPET of text from the document.
+                    systemPrompt = `You are an expert intelligent document editor working on a SELECTED SNIPPET.
 
-RULES:
-1. Return ONLY the updated HTML for the selected snippet.
-2. Do NOT include existing surrounding text, just the replacement for the selection.
-3. PRESERVE existing HTML tags within the selection (like bold, italic) unless asked to change.
-4. Do NOT include markdown blocks.
+## TASK
+Edit the selected text below. Return ONLY the updated HTML for this selection.
 
-MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
+## SELECTED TEXT:
+${currentContent}
 
-IF TRACK CHANGES IS ON:
-- Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
-- Wrap ANY added text in <span class="suggestion-insertion">...</span>
-- For replacements, include BOTH the deleted text (wrapped in deletion span) and new text (wrapped in insertion span).
+## OUTPUT RULES
+1. Return ONLY the updated HTML for the selection (not the whole document)
+2. PRESERVE existing HTML tags (bold, italic, etc.) unless asked to change
+3. Do NOT include markdown code blocks
 
-IF DIRECT EDIT IS ON:
-- Just return the polished HTML.
-
-Current Selection:
-${currentContent}`;
+## EDIT MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
+${trackChanges ? `- Wrap DELETED text in: <span class="suggestion-deletion">deleted text</span>
+- Wrap INSERTED text in: <span class="suggestion-insertion">new text</span>
+- For replacements: show BOTH deletion and insertion spans` : `- Apply changes cleanly without tracking spans`}`;
                 } else {
                     // Build context with both panes if notes are visible
                     const notesContent = notesVisible ? getNotesContent() : '';
                     const finalContent = currentContent;
 
-                    systemPrompt = `You are an expert intelligent document editor.
-The user wants you to edit documents provided in HTML format.
+                    systemPrompt = `You are an expert intelligent document editor with access to a dual-pane editing system.
 
-${notesVisible ? `## SCRATCH NOTES (reference material, do NOT edit unless asked):
+## WORKSPACE STRUCTURE
+${notesVisible ? `**NOTES PANE** (left side - reference material, scratchpad):
 ${notesContent}
 
-## FINAL DOCUMENT (edit this):
-${finalContent}` : `## DOCUMENT:
+**FINAL DOCUMENT PANE** (right side - the document being edited):
+${finalContent}` : `**DOCUMENT**:
 ${finalContent}`}
 
-RULES:
-1. PRESERVE existing HTML structure (headers, lists, bold, etc.) unless explicitly asked to change it.
-2. Return ONLY the fully updated HTML content for the FINAL DOCUMENT. Do NOT include markdown blocks.
-3. Do NOT include explanations.
-4. If the user asks to "incorporate" or "move" something from notes, add it to the final document.
+## YOUR CAPABILITIES
+1. **Edit the Final Document**: Return updated HTML and it will replace the final document content
+2. **Transfer from Notes to Final**: When asked, incorporate content from Notes into the Final Document
+3. **Track Changes Mode**: Currently ${trackChanges ? 'ON - show insertions/deletions as tracked changes' : 'OFF - make clean edits without tracking'}
+${notesVisible ? `4. **Read Notes**: You can reference the Notes pane content to inform your edits` : ''}
 
-MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
+## OUTPUT RULES
+1. Return ONLY the fully updated HTML for the FINAL DOCUMENT
+2. PRESERVE existing HTML structure (headers, lists, bold, etc.) unless asked to change
+3. Do NOT include markdown code blocks or explanations
+4. If asked to "incorporate", "move", "transfer", or "use" content from Notes → add it to Final Document
+5. If asked to "start fresh based on notes" → create new Final Document content using Notes as source
 
-IF TRACK CHANGES IS ON:
-- Wrap ANY deleted text in <span class="suggestion-deletion">...</span>
-- Wrap ANY added text in <span class="suggestion-insertion">...</span>
-- Do NOT simply replace text; show the diff.
-
-IF DIRECT EDIT IS ON:
-- Just apply the changes cleanly without extra tags.`;
+## EDIT MODE: ${trackChanges ? 'TRACK CHANGES' : 'DIRECT EDIT'}
+${trackChanges ? `- Wrap DELETED text in: <span class="suggestion-deletion">deleted text</span>
+- Wrap INSERTED text in: <span class="suggestion-insertion">new text</span>
+- Show the diff, don't just replace` : `- Apply changes cleanly without tracking spans
+- User explicitly requested direct edits without tracking`}`;
                 }
             } else {
                 // Conversational mode - respond naturally without forcing edits
                 const notesContent = notesVisible ? getNotesContent() : '';
 
-                systemPrompt = `You are a helpful AI assistant for document editing.
-The user is working on a document and may ask questions, discuss ideas, or request edits.
+                systemPrompt = `You are a helpful AI assistant for document editing with access to a dual-pane workspace.
 
-IMPORTANT: The user's message does NOT appear to be asking for document changes.
-- Respond conversationally in plain text (not HTML)
-- Answer questions, provide information, or discuss the topic
-- If they DO want document changes, they will explicitly ask (e.g., "edit this", "fix the grammar", "make this shorter")
-- Do NOT modify the document unless explicitly asked
+## YOUR CAPABILITIES
+1. **Answer questions** about the document or notes content
+2. **Discuss ideas** and provide suggestions
+3. **Edit documents** when explicitly asked (use keywords like "edit", "change", "fix", "improve", "put this in the final doc")
+4. **Transfer content** from Notes to Final Document when asked
+5. **Toggle edit modes**: Track Changes (show diffs) vs Direct Edit (clean changes)
+${notesVisible ? `6. **Reference Notes**: Access scratch notes as context for your responses` : ''}
 
-${notesVisible ? `## SCRATCH NOTES:
-${notesContent.slice(0, 1000)}...
+## RESPONSE MODE
+This message does NOT appear to be an edit request, so:
+- Respond conversationally in plain text (NOT HTML)
+- Answer questions, discuss ideas, provide information
+- If they want document changes, they'll say "edit", "change", "put in the final doc", etc.
+
+${notesVisible ? `## NOTES PANE (reference material):
+${notesContent.slice(0, 1500)}...
 
 ## FINAL DOCUMENT:
 ${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0, 1500)}...` :
-`${isSelectionMode ? `Selected text they may be asking about:\n${currentContent}` : `Document context:\n${currentContent.slice(0, 1500)}...`}`}`;
+`${isSelectionMode ? `Selected text:\n${currentContent}` : `Document:\n${currentContent.slice(0, 1500)}...`}`}`;
             }
 
             // Inject meeting context if enabled
             if (useMeetingContext && meetingContext) {
-                systemPrompt += `\n\n## Additional Context from Recent Meetings:\n${meetingContext}\n\nUse this context to inform your edits if relevant.`;
+                systemPrompt += `\n\n## MEETING CONTEXT (from RealtimeMeetingOutline)
+${meetingContext}
+
+**Available Meeting Data:**
+- Recent meetings with titles, dates, and transcript excerpts (2KB each)
+- Meeting outlines: topics, participants, decisions, action items
+- Known people and organizations across all meetings
+- Knowledge base entries (Slack, personal notes, tags)
+
+**Deep-Dive Tools** (if you need more than the excerpt):
+- Full transcripts available via API for specific meetings
+- Full meeting details (outline, entities, complete transcript) available on request
+
+Use this meeting context to inform your document edits when relevant.`;
             }
 
             const allMessages = [
@@ -742,6 +842,7 @@ ${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0,
                         padding: '6px 10px',
                         borderBottom: '1px solid #e5e5e5',
                         background: '#fafafa',
+                        position: 'relative',
                     }}>
                         {/* Active sources indicator */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
@@ -760,7 +861,9 @@ ${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0,
                                     color: notesVisible ? '#1a73e8' : '#888',
                                     cursor: 'pointer',
                                 }}
-                                title={notesVisible ? 'Notes enabled - click to disable' : 'Notes disabled - click to enable'}
+                                title={notesVisible
+                                    ? 'Notes pane included as AI context - your scratch notes are sent with each message. Click to disable.'
+                                    : 'Include Notes pane as AI context - add reference material the AI can use. Click to enable.'}
                             >
                                 📝 Notes {notesVisible ? '✓' : ''}
                             </button>
@@ -785,30 +888,169 @@ ${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0,
                                     color: (useMeetingContext && meetingContext) ? '#1a73e8' : '#888',
                                     cursor: 'pointer',
                                 }}
-                                title={(useMeetingContext && meetingContext) ? 'Meeting context loaded - click to clear' : 'Click to fetch meeting context from RMO'}
+                                title={(useMeetingContext && meetingContext)
+                                    ? 'Meeting transcripts & entities from RealtimeMeetingOutline included. Click to clear.'
+                                    : 'Fetch meetings from RealtimeMeetingOutline. To start: cd ~/code/RealtimeMeetingOutline && docker-compose up -d && cd backend && npm run dev'}
                             >
                                 📅 Meetings {(useMeetingContext && meetingContext) ? '✓' : ''}
                             </button>
+                            <button
+                                onClick={() => setShowMeetingInfo(!showMeetingInfo)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '2px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#888',
+                                    cursor: 'pointer',
+                                }}
+                                title="View meeting integration capabilities"
+                            >
+                                <Info size={12} />
+                            </button>
                         </div>
-                        <button
-                            onClick={clearChat}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 8px',
-                                fontSize: '11px',
-                                background: 'transparent',
+                        {/* Meeting Info Panel */}
+                        {showMeetingInfo && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                background: 'white',
                                 border: '1px solid #e5e5e5',
-                                borderRadius: '4px',
-                                color: '#666',
-                                cursor: 'pointer',
-                            }}
-                            title="Clear chat history"
-                        >
-                            <Trash2 size={12} />
-                            Clear
-                        </button>
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                padding: '12px',
+                                zIndex: 100,
+                                fontSize: '11px',
+                                maxHeight: '400px',
+                                overflowY: 'auto',
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <strong style={{ fontSize: '12px' }}>📅 Meeting Integration</strong>
+                                    <button
+                                        onClick={() => setShowMeetingInfo(false)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+
+                                <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '4px', color: '#333' }}>What&apos;s Included:</div>
+                                    <ul style={{ margin: 0, paddingLeft: '16px', color: '#555' }}>
+                                        <li>Recent meetings (titles, dates, 2KB transcript excerpts)</li>
+                                        <li>Meeting outlines (topics, participants, decisions)</li>
+                                        <li>Known people &amp; organizations from all meetings</li>
+                                        <li>Knowledge base entries (Slack, notes, tags)</li>
+                                        <li>User files from your data folder</li>
+                                    </ul>
+                                </div>
+
+                                <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '4px', color: '#333' }}>Deep Dive Tools:</div>
+                                    <ul style={{ margin: 0, paddingLeft: '16px', color: '#555' }}>
+                                        <li><code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: '3px' }}>fetchFullTranscript(meetingId)</code> - Get complete transcript</li>
+                                        <li><code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: '3px' }}>fetchFullMeeting(meetingId)</code> - Get all meeting data</li>
+                                    </ul>
+                                </div>
+
+                                <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '4px', color: '#333' }}>Entity Types:</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                        {['People', 'Organizations', 'VCs', 'Action Items', 'Ideas', 'Technologies', 'Decisions'].map(type => (
+                                            <span key={type} style={{
+                                                background: '#e8f0fe',
+                                                color: '#1a73e8',
+                                                padding: '2px 6px',
+                                                borderRadius: '10px',
+                                                fontSize: '10px',
+                                            }}>{type}</span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '8px' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '4px', color: '#333' }}>Start RMO Backend:</div>
+                                    <code style={{
+                                        display: 'block',
+                                        background: '#1e1e1e',
+                                        color: '#d4d4d4',
+                                        padding: '8px',
+                                        borderRadius: '4px',
+                                        fontSize: '10px',
+                                        whiteSpace: 'pre-wrap',
+                                    }}>cd ~/code/RealtimeMeetingOutline{'\n'}docker-compose up -d{'\n'}cd backend &amp;&amp; npm run dev</code>
+                                </div>
+
+                                <div style={{ marginTop: '8px', color: '#888', fontSize: '10px' }}>
+                                    API: <code>localhost:3848</code> •
+                                    Frontend: <code>localhost:5847</code>
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                                onClick={handleExportToWord}
+                                disabled={isExporting}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '11px',
+                                    background: 'transparent',
+                                    border: '1px solid #e5e5e5',
+                                    borderRadius: '4px',
+                                    color: isExporting ? '#999' : '#666',
+                                    cursor: isExporting ? 'wait' : 'pointer',
+                                }}
+                                title="Export to Word (.docx) with track changes"
+                            >
+                                <Download size={12} />
+                                {isExporting ? '...' : 'Word'}
+                            </button>
+                            <button
+                                onClick={handleExportToGoogleDoc}
+                                disabled={isExportingGDoc}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '11px',
+                                    background: 'transparent',
+                                    border: '1px solid #e5e5e5',
+                                    borderRadius: '4px',
+                                    color: isExportingGDoc ? '#999' : '#666',
+                                    cursor: isExportingGDoc ? 'wait' : 'pointer',
+                                }}
+                                title="Export to Google Docs (opens in new tab)"
+                            >
+                                <Download size={12} />
+                                {isExportingGDoc ? '...' : 'GDoc'}
+                            </button>
+                            <button
+                                onClick={clearChat}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '11px',
+                                    background: 'transparent',
+                                    border: '1px solid #e5e5e5',
+                                    borderRadius: '4px',
+                                    color: '#666',
+                                    cursor: 'pointer',
+                                }}
+                                title="Clear chat history"
+                            >
+                                <Trash2 size={12} />
+                                Clear
+                            </button>
+                        </div>
                     </div>
                     <div className={styles.messages}>
                         {messages.map((msg) => {

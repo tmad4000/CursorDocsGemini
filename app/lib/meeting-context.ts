@@ -1,7 +1,8 @@
 // Meeting context integration for RealtimeMeetingOutline
 // Fetches comprehensive context including meetings, files, knowledge base, and entities
 
-const RMO_API_BASE = 'http://localhost:3002';
+// Use environment variable with fallback to default RMO port
+const RMO_API_BASE = process.env.NEXT_PUBLIC_RMO_API_URL || 'http://localhost:3848';
 
 export interface UserFile {
   filename: string;
@@ -53,7 +54,7 @@ export interface RMOContext {
 
 /**
  * Fetch comprehensive context from RealtimeMeetingOutline backend
- * Requires the RMO backend to be running on localhost:3002
+ * Requires the RMO backend to be running (default: localhost:3848, or set NEXT_PUBLIC_RMO_API_URL)
  *
  * Auth options:
  * - Pass an auth token for full access to user-specific meetings
@@ -210,6 +211,75 @@ export async function fetchMeetingContext(authToken?: string): Promise<{ meeting
     meetings: context.recentMeetings,
     summary: buildContextSummary(context),
   };
+}
+
+/**
+ * Fetch full transcript for a specific meeting
+ * Use when you need the complete transcript (not just the 2KB excerpt)
+ */
+export async function fetchFullTranscript(meetingId: string, authToken?: string): Promise<{
+  meetingId: string;
+  title: string;
+  date: string;
+  transcript: string;
+  transcriptLength: number;
+} | null> {
+  try {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const response = await fetch(`${RMO_API_BASE}/api/assistant/meeting/${meetingId}/transcript`, {
+      headers,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to fetch transcript:', response.status);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.warn('Could not fetch transcript:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch full meeting details including transcript, outline, entities
+ * Use when you need comprehensive meeting data for deep analysis
+ */
+export async function fetchFullMeeting(meetingId: string, authToken?: string): Promise<{
+  id: string;
+  title: string;
+  date: string;
+  endDate?: string;
+  duration?: number;
+  status: string;
+  transcript: string;
+  outline: Meeting['outline'];
+  listCaptures: Array<{ name: string; lists: string[] }>;
+  entities: Array<{ type: string; name: string; [key: string]: unknown }>;
+} | null> {
+  try {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const response = await fetch(`${RMO_API_BASE}/api/assistant/meeting/${meetingId}`, {
+      headers,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to fetch meeting details:', response.status);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.warn('Could not fetch meeting details:', error);
+    return null;
+  }
 }
 
 /**
