@@ -330,7 +330,7 @@ export default function AISidebar() {
             let systemPrompt = "";
 
             // Check if this looks like a request for document changes
-            const editKeywords = /\b(edit|change|fix|improve|rewrite|revise|update|make|add|remove|delete|insert|replace|proofread|correct|shorten|expand|summarize|rephrase)\b/i;
+            const editKeywords = /\b(edit|change|fix|improve|rewrite|revise|update|make|add|remove|delete|insert|replace|proofread|correct|shorten|expand|summarize|rephrase|write|create|generate|draft|compose|incorporate|move|transfer|put|based on the notes|from the notes|into the doc|to the doc)\b/i;
             const looksLikeEditRequest = alwaysSuggestChanges || editKeywords.test(textToSend);
 
             if (looksLikeEditRequest) {
