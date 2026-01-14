@@ -734,13 +734,62 @@ ${isSelectionMode ? `Selected text: ${currentContent}` : currentContent.slice(0,
 
             {activeTab === 'chat' ? (
                 <>
-                    {/* Chat header with clear button */}
+                    {/* Chat header with sources and clear button */}
                     <div style={{
                         display: 'flex',
-                        justifyContent: 'flex-end',
-                        padding: '4px 8px',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '6px 10px',
                         borderBottom: '1px solid #e5e5e5',
+                        background: '#fafafa',
                     }}>
+                        {/* Active sources indicator */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                            <span style={{ color: '#999' }}>Sources:</span>
+                            <button
+                                onClick={() => setNotesVisible(!notesVisible)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    padding: '2px 6px',
+                                    fontSize: '10px',
+                                    background: notesVisible ? '#e8f0fe' : '#f0f0f0',
+                                    border: `1px solid ${notesVisible ? '#4285f4' : '#ddd'}`,
+                                    borderRadius: '10px',
+                                    color: notesVisible ? '#1a73e8' : '#888',
+                                    cursor: 'pointer',
+                                }}
+                                title={notesVisible ? 'Notes enabled - click to disable' : 'Notes disabled - click to enable'}
+                            >
+                                📝 Notes {notesVisible ? '✓' : ''}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (useMeetingContext && meetingContext) {
+                                        handleClearMeetingContext();
+                                    } else {
+                                        setUseMeetingContext(true);
+                                        if (!meetingContext) handleFetchMeetingContext();
+                                    }
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    padding: '2px 6px',
+                                    fontSize: '10px',
+                                    background: (useMeetingContext && meetingContext) ? '#e8f0fe' : '#f0f0f0',
+                                    border: `1px solid ${(useMeetingContext && meetingContext) ? '#4285f4' : '#ddd'}`,
+                                    borderRadius: '10px',
+                                    color: (useMeetingContext && meetingContext) ? '#1a73e8' : '#888',
+                                    cursor: 'pointer',
+                                }}
+                                title={(useMeetingContext && meetingContext) ? 'Meeting context loaded - click to clear' : 'Click to fetch meeting context from RMO'}
+                            >
+                                📅 Meetings {(useMeetingContext && meetingContext) ? '✓' : ''}
+                            </button>
+                        </div>
                         <button
                             onClick={clearChat}
                             style={{
