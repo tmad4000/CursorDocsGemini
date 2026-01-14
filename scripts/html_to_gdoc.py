@@ -3,8 +3,8 @@
 Convert HTML with track changes to Google Docs with suggestions.
 
 This script creates a Google Doc from HTML content, converting:
-- <span class="suggestion-insertion">text</span> -> Google Docs suggestion (add)
-- <span class="suggestion-deletion">text</span> -> Google Docs suggestion (delete)
+- <span class="suggestion-insertion">text</span> -> Green underlined text (insertion)
+- <span class="suggestion-deletion">text</span> -> Red strikethrough text (deletion)
 
 Usage:
     python html_to_gdoc.py --html "<p>Hello world</p>" --title "My Document"
@@ -14,25 +14,26 @@ Usage:
 Requirements:
     pip install google-auth google-auth-oauthlib google-api-python-client beautifulsoup4 lxml
 
-Environment:
-    GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
-    or pass --credentials /path/to/service-account.json
+First run will open browser for OAuth consent.
 """
 
 import argparse
 import sys
 import os
 import json
+import pickle
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 try:
-    from google.oauth2 import service_account
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
     from bs4 import BeautifulSoup, NavigableString, Tag
 except ImportError as e:
     print(f"Missing dependency: {e}", file=sys.stderr)
-    print("Install with: pip install google-auth google-api-python-client beautifulsoup4 lxml", file=sys.stderr)
+    print("Install with: pip install google-auth google-auth-oauthlib google-api-python-client beautifulsoup4 lxml", file=sys.stderr)
     sys.exit(1)
 
 SCOPES = [
@@ -40,47 +41,60 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive.file'
 ]
 
+# Paths relative to script directory
+SCRIPT_DIR = Path(__file__).parent.parent
+TOKEN_FILE = SCRIPT_DIR / 'gdoc_token.pickle'
+CLIENT_SECRET_GLOB = str(Path.home() / 'Downloads' / 'client_secret_*.json')
 
-def get_credentials(credentials_path: Optional[str] = None):
-    """Get Google service account credentials."""
-    if credentials_path:
-        creds_file = credentials_path
-    else:
-        creds_file = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 
-    if not creds_file:
-        # Try default location in script directory
-        script_dir = Path(__file__).parent.parent
-        default_path = script_dir / 'service-account.json'
-        if default_path.exists():
-            creds_file = str(default_path)
+def get_credentials():
+    """Get Google OAuth credentials, prompting for login if needed."""
+    creds = None
+
+    # Load existing token
+    if TOKEN_FILE.exists():
+        with open(TOKEN_FILE, 'rb') as token:
+            creds = pickle.load(token)
+
+    # Refresh or get new credentials
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
         else:
-            raise ValueError(
-                "No credentials found. Set GOOGLE_APPLICATION_CREDENTIALS or pass --credentials"
-            )
+            # Find client secret file
+            import glob
+            client_files = glob.glob(CLIENT_SECRET_GLOB)
+            if not client_files:
+                # Also check project root
+                client_files = glob.glob(str(SCRIPT_DIR / 'client_secret_*.json'))
 
-    return service_account.Credentials.from_service_account_file(
-        creds_file, scopes=SCOPES
-    )
+            if not client_files:
+                raise FileNotFoundError(
+                    f"No client_secret_*.json found in ~/Downloads or project root.\n"
+                    "Download OAuth credentials from Google Cloud Console."
+                )
+
+            client_file = client_files[0]
+            print(f"Using credentials: {client_file}", file=sys.stderr)
+
+            flow = InstalledAppFlow.from_client_secrets_file(client_file, SCOPES)
+            creds = flow.run_local_server(port=0)
+
+        # Save token for next time
+        with open(TOKEN_FILE, 'wb') as token:
+            pickle.dump(creds, token)
+        print(f"Token saved to {TOKEN_FILE}", file=sys.stderr)
+
+    return creds
 
 
 def create_google_doc(title: str, credentials) -> Dict[str, Any]:
     """Create a new Google Doc and return its metadata."""
     docs_service = build('docs', 'v1', credentials=credentials)
-    drive_service = build('drive', 'v3', credentials=credentials)
 
     # Create the document
     doc = docs_service.documents().create(body={'title': title}).execute()
     doc_id = doc['documentId']
-
-    # Make it shareable (anyone with link can edit)
-    drive_service.permissions().create(
-        fileId=doc_id,
-        body={
-            'type': 'anyone',
-            'role': 'writer'
-        }
-    ).execute()
 
     return {
         'documentId': doc_id,
@@ -92,14 +106,11 @@ def create_google_doc(title: str, credentials) -> Dict[str, Any]:
 def html_to_requests(html: str) -> List[Dict[str, Any]]:
     """
     Convert HTML to Google Docs API requests.
-
-    Returns a list of requests to be applied in reverse order
-    (Google Docs API applies from end to start for insertions).
     """
     soup = BeautifulSoup(html, 'lxml')
     body = soup.body if soup.body else soup
 
-    # First pass: extract all content and track changes
+    # Extract all content and track changes
     segments = []
 
     def process_element(element, styles=None):
@@ -159,10 +170,8 @@ def html_to_requests(html: str) -> List[Dict[str, Any]]:
 
         # Handle block elements - add newlines
         if tag_name in ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']:
-            # Process children
             for child in element.children:
                 process_element(child, new_styles)
-            # Add newline after block elements
             segments.append({'type': 'text', 'text': '\n', 'styles': {}})
         elif tag_name == 'br':
             segments.append({'type': 'text', 'text': '\n', 'styles': {}})
@@ -173,7 +182,6 @@ def html_to_requests(html: str) -> List[Dict[str, Any]]:
                     process_element(child, new_styles)
                 segments.append({'type': 'text', 'text': '\n', 'styles': {}})
         else:
-            # Default: recurse
             for child in element.children:
                 process_element(child, new_styles)
 
@@ -181,49 +189,24 @@ def html_to_requests(html: str) -> List[Dict[str, Any]]:
     for element in body.children:
         process_element(element)
 
-    # Build the requests
-    # Google Docs API requires inserting from the end, so we build content first
-    # then create requests
-
+    # Build requests
     requests = []
-    current_index = 1  # Google Docs starts at index 1
-
-    # First, insert all text (both regular and suggestions)
-    # We'll handle suggestions separately after
+    text_segments = []
     full_text = ""
-    text_segments = []  # Track where each segment ends up
 
     for seg in segments:
-        if seg['type'] == 'text':
-            text_segments.append({
-                'start': len(full_text) + 1,
-                'end': len(full_text) + len(seg['text']) + 1,
-                'text': seg['text'],
-                'styles': seg['styles'],
-                'type': 'text'
-            })
-            full_text += seg['text']
-        elif seg['type'] == 'insertion':
-            # For suggestions, we insert the text but mark it as a suggestion
-            text_segments.append({
-                'start': len(full_text) + 1,
-                'end': len(full_text) + len(seg['text']) + 1,
-                'text': seg['text'],
-                'styles': seg['styles'],
-                'type': 'insertion'
-            })
-            full_text += seg['text']
-        elif seg['type'] == 'deletion':
-            # For deletions, we still need to show the text (struck through)
-            # Google Docs suggestions work differently - we show deleted text as strikethrough
-            text_segments.append({
-                'start': len(full_text) + 1,
-                'end': len(full_text) + len(seg['text']) + 1,
-                'text': seg['text'],
-                'styles': {**seg['styles'], 'strikethrough': True, 'color': {'red': 0.8, 'green': 0.2, 'blue': 0.2}},
-                'type': 'deletion'
-            })
-            full_text += seg['text']
+        start_idx = len(full_text) + 1
+        text = seg.get('text', '')
+        end_idx = start_idx + len(text)
+
+        text_segments.append({
+            'start': start_idx,
+            'end': end_idx,
+            'text': text,
+            'styles': seg.get('styles', {}),
+            'type': seg['type']
+        })
+        full_text += text
 
     if not full_text:
         return []
@@ -238,28 +221,35 @@ def html_to_requests(html: str) -> List[Dict[str, Any]]:
 
     # Apply formatting for each segment
     for seg in text_segments:
-        if not seg['styles'] and seg['type'] == 'text':
+        if seg['end'] <= seg['start']:
             continue
 
         text_style = {}
+        fields = []
 
         if seg['styles'].get('bold'):
             text_style['bold'] = True
+            fields.append('bold')
         if seg['styles'].get('italic'):
             text_style['italic'] = True
+            fields.append('italic')
         if seg['styles'].get('underline'):
             text_style['underline'] = True
-        if seg['styles'].get('strikethrough'):
-            text_style['strikethrough'] = True
-        if seg['styles'].get('color'):
-            text_style['foregroundColor'] = {'color': {'rgbColor': seg['styles']['color']}}
+            fields.append('underline')
 
-        # Mark insertions with green color
+        # Mark insertions with green color + underline
         if seg['type'] == 'insertion':
-            text_style['foregroundColor'] = {'color': {'rgbColor': {'red': 0.2, 'green': 0.6, 'blue': 0.2}}}
+            text_style['foregroundColor'] = {'color': {'rgbColor': {'red': 0.13, 'green': 0.55, 'blue': 0.13}}}
             text_style['underline'] = True
+            fields.extend(['foregroundColor', 'underline'])
 
-        if text_style:
+        # Mark deletions with red color + strikethrough
+        if seg['type'] == 'deletion':
+            text_style['foregroundColor'] = {'color': {'rgbColor': {'red': 0.8, 'green': 0.2, 'blue': 0.2}}}
+            text_style['strikethrough'] = True
+            fields.extend(['foregroundColor', 'strikethrough'])
+
+        if text_style and fields:
             requests.append({
                 'updateTextStyle': {
                     'range': {
@@ -267,7 +257,7 @@ def html_to_requests(html: str) -> List[Dict[str, Any]]:
                         'endIndex': seg['end']
                     },
                     'textStyle': text_style,
-                    'fields': ','.join(text_style.keys())
+                    'fields': ','.join(set(fields))
                 }
             })
 
@@ -289,17 +279,12 @@ def html_to_requests(html: str) -> List[Dict[str, Any]]:
     return requests
 
 
-def create_doc_from_html(
-    html: str,
-    title: str,
-    credentials_path: Optional[str] = None
-) -> Dict[str, Any]:
+def create_doc_from_html(html: str, title: str) -> Dict[str, Any]:
     """
-    Create a Google Doc from HTML with track changes.
-
+    Create a Google Doc from HTML with track changes visualization.
     Returns dict with documentId, title, and url.
     """
-    credentials = get_credentials(credentials_path)
+    credentials = get_credentials()
 
     # Create the document
     doc_info = create_google_doc(title, credentials)
@@ -309,7 +294,6 @@ def create_doc_from_html(
     requests = html_to_requests(html)
 
     if requests:
-        # Apply the requests
         docs_service = build('docs', 'v1', credentials=credentials)
         docs_service.documents().batchUpdate(
             documentId=doc_id,
@@ -327,8 +311,6 @@ def main():
     parser.add_argument('--input', '-i', type=str, help='Input HTML file path')
     parser.add_argument('--title', '-t', type=str, default='Untitled Document',
                        help='Title for the Google Doc')
-    parser.add_argument('--credentials', '-c', type=str,
-                       help='Path to service account JSON')
     parser.add_argument('--json', action='store_true',
                        help='Output result as JSON')
 
@@ -345,14 +327,14 @@ def main():
         parser.error('Must provide --html, --input, or pipe HTML via stdin')
 
     try:
-        result = create_doc_from_html(html, args.title, args.credentials)
+        result = create_doc_from_html(html, args.title)
 
         if args.json:
             print(json.dumps(result))
         else:
             print(f"Created: {result['title']}", file=sys.stderr)
             print(f"URL: {result['url']}", file=sys.stderr)
-            print(result['url'])  # Output URL to stdout for scripts
+            print(result['url'])
 
     except Exception as e:
         if args.json:

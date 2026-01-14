@@ -20,9 +20,8 @@ export async function POST(req: Request) {
         // Write HTML to temp file
         writeFileSync(inputPath, html);
 
-        // Path to Python script and credentials
+        // Path to Python script (uses OAuth, not service account)
         const scriptPath = path.join(process.cwd(), 'scripts', 'html_to_gdoc.py');
-        const credentialsPath = path.join(process.cwd(), 'service-account.json');
 
         // Run Python script
         const result = await new Promise<{ success: boolean; url?: string; error?: string }>((resolve) => {
@@ -30,7 +29,6 @@ export async function POST(req: Request) {
                 scriptPath,
                 '--input', inputPath,
                 '--title', title,
-                '--credentials', credentialsPath,
                 '--json'
             ]);
 
