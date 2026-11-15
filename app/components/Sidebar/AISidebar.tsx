@@ -12,6 +12,7 @@ import {
     chatWithOpenAI,
     isStaticMode
 } from '@/lib/openai-client';
+import ReleaseStamp from '@/components/ReleaseStamp';
 import ApiKeyModal from '@/components/ApiKeyModal/ApiKeyModal';
 import { Settings, Key, Send } from 'lucide-react';
 
@@ -301,6 +302,8 @@ export default function AISidebar() {
                     </button>
                 </div>
             </div>
+
+            <footer className={styles.releaseDetails} aria-label="About CursorDocsGemini"><ReleaseStamp /></footer>
 
             <ApiKeyModal
                 isOpen={showApiKeyModal}
