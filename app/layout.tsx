@@ -27,7 +27,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
-        <Script src="https://worldissuetracker.com/widget/wit-feedback.js" strategy="afterInteractive" data-tracker-slug="cursordocsgemini-feedback" data-app="CursorDocsGemini" data-mode="feedback" data-trigger="tab" data-label="Send feedback" />
+        <Script src="https://worldissuetracker.com/widget/wit-feedback.js" strategy="afterInteractive" data-tracker-slug="cursordocsgemini-feedback" data-app="CursorDocsGemini" data-mode="feedback" data-trigger="none" data-label="Send feedback" />
       </body>
     </html>
   );

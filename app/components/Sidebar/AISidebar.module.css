@@ -275,3 +275,13 @@
     color: #0066cc;
     background-color: rgba(0, 102, 204, 0.05);
 }
+.feedbackButton {
+    border: 0;
+    background: transparent;
+    color: #666;
+    font: inherit;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.feedbackButton:hover { color: #111; }
