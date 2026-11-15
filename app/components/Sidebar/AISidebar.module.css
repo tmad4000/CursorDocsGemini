@@ -285,3 +285,5 @@
     cursor: pointer;
 }
 .feedbackButton:hover { color: var(--foreground); }
+
+.releaseDetails { flex: 0 0 auto; display: flex; justify-content: center; padding: 0.35rem 0.75rem; border-top: 1px solid var(--border); }
