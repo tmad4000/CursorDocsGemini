@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import styles from './ApiKeyModal.module.css';
+import ReleaseStamp from '@/components/ReleaseStamp';
 import { getStoredApiKey, setStoredApiKey } from '@/lib/openai-client';
 
 interface ApiKeyModalProps {
@@ -82,6 +83,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
                         platform.openai.com/api-keys
                     </a>
                 </p>
+                <footer className={styles.releaseDetails} aria-label="About CursorDocsGemini"><ReleaseStamp /></footer>
             </div>
         </div>
     );

@@ -12,7 +12,7 @@
 }
 
 .modal {
-    background: white;
+    background: var(--surface);
     border-radius: 12px;
     padding: 2rem;
     max-width: 420px;
@@ -24,39 +24,39 @@
     margin: 0 0 0.75rem 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #111;
+    color: var(--foreground);
 }
 
 .description {
     margin: 0 0 1.25rem 0;
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-muted);
     line-height: 1.5;
 }
 
 .input {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1px solid #e1e1e3;
+    border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 0.9rem;
     outline: none;
     transition: all 0.2s ease;
-    background-color: #f9f9fa;
+    background-color: var(--surface-subtle);
     font-family: monospace;
     box-sizing: border-box;
 }
 
 .input:focus {
-    background-color: #ffffff;
-    border-color: #0066cc;
+    background-color: var(--surface);
+    border-color: var(--link);
     box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
 }
 
 .error {
     margin: 0.5rem 0 0 0;
     font-size: 0.85rem;
-    color: #dc3545;
+    color: var(--danger-text);
 }
 
 .buttons {
@@ -77,13 +77,13 @@
 }
 
 .cancelButton {
-    background: #f5f5f7;
-    border: 1px solid #e1e1e3;
-    color: #333;
+    background: var(--surface-subtle);
+    border: 1px solid var(--border);
+    color: var(--foreground);
 }
 
 .cancelButton:hover {
-    background: #eee;
+    background: var(--surface-hover);
 }
 
 .saveButton {
@@ -99,15 +99,17 @@
 .hint {
     margin: 1.25rem 0 0 0;
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-muted);
     text-align: center;
 }
 
 .hint a {
-    color: #0066cc;
+    color: var(--link);
     text-decoration: none;
 }
 
 .hint a:hover {
     text-decoration: underline;
 }
+
+.releaseDetails { margin-top: 1rem; text-align: center; }

@@ -1,11 +1,11 @@
 {
   "name": "temp-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:static": "STATIC_EXPORT=true NEXT_PUBLIC_STATIC_MODE=true next build",
+    "build": "node scripts/build.mjs",
+    "build:static": "STATIC_EXPORT=true NEXT_PUBLIC_STATIC_MODE=true node scripts/build.mjs",
     "start": "next start",
     "lint": "eslint"
   },

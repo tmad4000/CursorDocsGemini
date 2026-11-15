@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+The Settings dialog includes a small release stamp. The build script captures one
+commit/time snapshot for both the bundled stamp and public/version.json, using
+commit time unless Git is unavailable or the tree is dirty. Tap or Enter shows
+exact local time and commit. The existing editor layout and blue accents stay
+the same; neutral surfaces follow the operating system light/dark preference.
