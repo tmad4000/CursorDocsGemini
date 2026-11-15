@@ -1,6 +1,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #ffffff;
+  --surface-subtle: #f5f5f7;
+  --surface-hover: #eeeeee;
+  --border: #e1e1e3;
+  --text-secondary: #555555;
+  --text-muted: #666666;
+  --link: #0066cc;
+  --selection-bg: #e3f2fd;
+  --success-text: #137333; --success-bg: #e6ffec; --danger-text: #b91c1c; --danger-bg: #ffe6e6;
 }
 
 * {
@@ -40,3 +49,10 @@ body {
   color: #da1e28;
   text-decoration: line-through;
 }
+@media (prefers-color-scheme: dark) {
+  :root { --background: #111318; --foreground: #e5e7eb; --surface: #181b22; --surface-subtle: #20242d; --surface-hover: #2b303b; --border: #424957; --text-secondary: #c1c7d0; --text-muted: #adb5c2; --link: #8bbcff; --selection-bg: #1c3555; --success-text: #98e5af; --success-bg: #163a25; --danger-text: #ffb2b2; --danger-bg: #492225; }
+  .suggestion-insertion { background-color: #163a25; color: #86d9a3; border-color: #86d9a3; }
+  .suggestion-deletion { background-color: #492225; color: #ffb2b2; }
+}
+.app-release-stamp { border: 0; background: none; color: var(--text-muted); padding: 4px; font: 12px system-ui, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; }
+.app-release-stamp:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

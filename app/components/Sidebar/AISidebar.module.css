@@ -7,7 +7,7 @@
 
 .header {
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -16,7 +16,7 @@
 .header h2 {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #111;
+    color: var(--foreground);
     margin: 0;
     letter-spacing: -0.01em;
 }
@@ -29,22 +29,22 @@
 
 .modelSelector {
     padding: 0.35rem 0.5rem;
-    border: 1px solid #e1e1e3;
+    border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 0.75rem;
-    background-color: #f9f9fa;
-    color: #333;
+    background-color: var(--surface-subtle);
+    color: var(--foreground);
     cursor: pointer;
     outline: none;
     transition: all 0.2s ease;
 }
 
 .modelSelector:hover {
-    border-color: #ccc;
+    border-color: var(--border);
 }
 
 .modelSelector:focus {
-    border-color: #0066cc;
+    border-color: var(--link);
     box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
 }
 
@@ -54,7 +54,7 @@
     gap: 0.5rem;
     font-size: 0.8rem;
     cursor: pointer;
-    color: #555;
+    color: var(--text-secondary);
     user-select: none;
 }
 
@@ -82,8 +82,8 @@
 }
 
 .aiMessage {
-    background-color: #f5f5f7;
-    color: #333;
+    background-color: var(--surface-subtle);
+    color: var(--foreground);
     align-self: flex-start;
     border-bottom-left-radius: 2px;
 }
@@ -97,24 +97,24 @@
 
 .inputArea {
     padding: 1rem;
-    border-top: 1px solid #f0f0f0;
-    background-color: #fff;
+    border-top: 1px solid var(--border);
+    background-color: var(--surface);
 }
 
 .inputWrapper {
     display: flex;
     align-items: flex-end;
     gap: 0.5rem;
-    background-color: #f9f9fa;
-    border: 1px solid #e1e1e3;
+    background-color: var(--surface-subtle);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0.5rem;
     transition: all 0.2s ease;
 }
 
 .inputWrapper:focus-within {
-    background-color: #ffffff;
-    border-color: #0066cc;
+    background-color: var(--surface);
+    border-color: var(--link);
     box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
 }
 
@@ -135,7 +135,7 @@
 }
 
 .textarea::placeholder {
-    color: #999;
+    color: var(--text-muted);
 }
 
 .sendButton {
@@ -163,7 +163,7 @@
 
 .typingIndicator {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-muted);
     margin-left: 0.5rem;
     font-style: italic;
 }
@@ -180,7 +180,7 @@
     padding: 0.4rem;
     border-radius: 6px;
     cursor: pointer;
-    color: #666;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -188,14 +188,14 @@
 }
 
 .settingsButton:hover {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: var(--surface-hover);
+    color: var(--foreground);
 }
 
 .settingsPanel {
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #f0f0f0;
-    background-color: #fafafa;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--surface-subtle);
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -209,14 +209,14 @@
 
 .settingRow > label:first-child {
     font-size: 0.8rem;
-    color: #555;
+    color: var(--text-secondary);
     min-width: 50px;
 }
 
 .apiKeySection {
     margin-top: 0.25rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #e8e8e8;
+    border-top: 1px solid var(--border);
 }
 
 .apiKeyStatus {
@@ -224,7 +224,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8rem;
-    color: #28a745;
+    color: var(--success-text);
 }
 
 .apiKeyStatus span {
@@ -236,7 +236,7 @@
     background: none;
     border: none;
     font-size: 0.75rem;
-    color: #0066cc;
+    color: var(--link);
     cursor: pointer;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
@@ -247,7 +247,7 @@
 }
 
 .clearKeyButton {
-    color: #dc3545;
+    color: var(--danger-text);
 }
 
 .clearKeyButton:hover {
@@ -259,11 +259,11 @@
     align-items: center;
     gap: 0.5rem;
     background: none;
-    border: 1px dashed #ccc;
+    border: 1px dashed var(--border);
     padding: 0.5rem 0.75rem;
     border-radius: 6px;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-muted);
     cursor: pointer;
     width: 100%;
     justify-content: center;
@@ -271,17 +271,17 @@
 }
 
 .addKeyButton:hover {
-    border-color: #0066cc;
-    color: #0066cc;
+    border-color: var(--link);
+    color: var(--link);
     background-color: rgba(0, 102, 204, 0.05);
 }
 .feedbackButton {
     border: 0;
     background: transparent;
-    color: #666;
+    color: var(--text-muted);
     font: inherit;
     font-size: 0.75rem;
     white-space: nowrap;
     cursor: pointer;
 }
-.feedbackButton:hover { color: #111; }
+.feedbackButton:hover { color: var(--foreground); }
