@@ -181,6 +181,11 @@ export default function AISidebar() {
             <div className={styles.header}>
                 <h2>AI Assistant</h2>
                 <div className={styles.headerButtons}>
+                    <button className={styles.feedbackButton} onClick={() => {
+                        const w = window as Window & { WitFeedback?: { open(): void }; __witFeedbackQueue?: [string, unknown[]][] };
+                        if (w.WitFeedback) w.WitFeedback.open();
+                        else (w.__witFeedbackQueue ||= []).push(['open', []]);
+                    }}>Send feedback</button>
                     <button
                         className={styles.settingsButton}
                         onClick={() => setShowSettings(!showSettings)}
